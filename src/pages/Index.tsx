@@ -1,13 +1,34 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React, { useState } from 'react';
+import AuthComponent from '../components/AuthComponent';
+import Dashboard from '../components/Dashboard';
+
+interface User {
+  email: string;
+  department: string;
+}
 
 const Index = () => {
+  const [user, setUser] = useState<User | null>(null);
+
+  const handleLogin = (userData: User) => {
+    setUser(userData);
+    console.log('User logged in:', userData);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    console.log('User logged out');
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <>
+      {user ? (
+        <Dashboard user={user} onLogout={handleLogout} />
+      ) : (
+        <AuthComponent onLogin={handleLogin} />
+      )}
+    </>
   );
 };
 
