@@ -52,7 +52,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
     }, 1500);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
