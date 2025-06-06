@@ -36,7 +36,6 @@ const PowerBIViewer: React.FC<PowerBIViewerProps> = ({ menu, onBack }) => {
         title: menu.title,
         embedUrl: `https://app.powerbi.com/reportEmbed?reportId=${reportId}`,
         accessToken: 'mock-access-token',
-        data: generateMockChartData(menu.id),
         lastUpdated: new Date().toISOString()
       };
       
@@ -49,41 +48,6 @@ const PowerBIViewer: React.FC<PowerBIViewerProps> = ({ menu, onBack }) => {
     }
   };
 
-  // Generate mock data based on report type
-  const generateMockChartData = (menuId: string) => {
-    const baseData = {
-      'financial-overview': {
-        revenue: 2500000,
-        expenses: 1800000,
-        profit: 700000,
-        growth: '+12.5%'
-      },
-      'budget-analysis': {
-        budgetUtilization: 78,
-        departments: ['Finance', 'IT', 'HR', 'Sales'],
-        spending: [850000, 650000, 420000, 780000]
-      },
-      'system-performance': {
-        uptime: 99.8,
-        responseTime: 142,
-        activeUsers: 1247,
-        incidents: 3
-      },
-      'sales-performance': {
-        monthlyRevenue: 450000,
-        target: 500000,
-        conversion: 24.5,
-        deals: 89
-      }
-    };
-
-    return baseData[menuId as keyof typeof baseData] || {
-      value: Math.floor(Math.random() * 1000000),
-      percentage: Math.floor(Math.random() * 100),
-      trend: Math.random() > 0.5 ? 'up' : 'down'
-    };
-  };
-
   useEffect(() => {
     fetchPowerBIReport(menu.powerBIReportId);
   }, [menu.powerBIReportId]);
@@ -92,102 +56,18 @@ const PowerBIViewer: React.FC<PowerBIViewerProps> = ({ menu, onBack }) => {
     fetchPowerBIReport(menu.powerBIReportId);
   };
 
-  const renderMockVisualization = () => {
+  const renderPowerBIReport = () => {
     if (!reportData) return null;
 
     return (
       <div className="mt-4">
-        <Row className="g-4">
-          <Col xs={12} md={6} lg={3}>
-            <Card className="text-center p-3 border-0 bg-primary text-white">
-              <h3 className="fw-bold">
-                {typeof reportData.data.revenue !== 'undefined' 
-                  ? `$${(reportData.data.revenue / 1000000).toFixed(1)}M`
-                  : typeof reportData.data.uptime !== 'undefined'
-                  ? `${reportData.data.uptime}%`
-                  : typeof reportData.data.monthlyRevenue !== 'undefined'
-                  ? `$${(reportData.data.monthlyRevenue / 1000).toFixed(0)}K`
-                  : reportData.data.value
-                }
-              </h3>
-              <p className="mb-0 opacity-75">
-                {menu.id.includes('financial') ? 'Revenue' 
-                : menu.id.includes('system') ? 'Uptime'
-                : menu.id.includes('sales') ? 'Monthly Revenue'
-                : 'Primary Metric'}
-              </p>
-            </Card>
-          </Col>
-          
-          <Col xs={12} md={6} lg={3}>
-            <Card className="text-center p-3 border-0 bg-success text-white">
-              <h3 className="fw-bold">
-                {typeof reportData.data.profit !== 'undefined'
-                  ? `$${(reportData.data.profit / 1000000).toFixed(1)}M`
-                  : typeof reportData.data.activeUsers !== 'undefined'
-                  ? reportData.data.activeUsers.toLocaleString()
-                  : typeof reportData.data.conversion !== 'undefined'
-                  ? `${reportData.data.conversion}%`
-                  : `${reportData.data.percentage}%`
-                }
-              </h3>
-              <p className="mb-0 opacity-75">
-                {menu.id.includes('financial') ? 'Profit'
-                : menu.id.includes('system') ? 'Active Users'
-                : menu.id.includes('sales') ? 'Conversion Rate'
-                : 'Secondary Metric'}
-              </p>
-            </Card>
-          </Col>
-
-          <Col xs={12} md={6} lg={3}>
-            <Card className="text-center p-3 border-0 bg-warning text-white">
-              <h3 className="fw-bold">
-                {typeof reportData.data.growth !== 'undefined'
-                  ? reportData.data.growth
-                  : typeof reportData.data.responseTime !== 'undefined'
-                  ? `${reportData.data.responseTime}ms`
-                  : typeof reportData.data.target !== 'undefined'
-                  ? `$${(reportData.data.target / 1000).toFixed(0)}K`
-                  : '85%'}
-              </h3>
-              <p className="mb-0 opacity-75">
-                {menu.id.includes('financial') ? 'Growth'
-                : menu.id.includes('system') ? 'Response Time'
-                : menu.id.includes('sales') ? 'Target'
-                : 'Growth Rate'}
-              </p>
-            </Card>
-          </Col>
-
-          <Col xs={12} md={6} lg={3}>
-            <Card className="text-center p-3 border-0 bg-info text-white">
-              <h3 className="fw-bold">
-                {typeof reportData.data.expenses !== 'undefined'
-                  ? `$${(reportData.data.expenses / 1000000).toFixed(1)}M`
-                  : typeof reportData.data.incidents !== 'undefined'
-                  ? reportData.data.incidents
-                  : typeof reportData.data.deals !== 'undefined'
-                  ? reportData.data.deals
-                  : '342'}
-              </h3>
-              <p className="mb-0 opacity-75">
-                {menu.id.includes('financial') ? 'Expenses'
-                : menu.id.includes('system') ? 'Incidents'
-                : menu.id.includes('sales') ? 'Deals Closed'
-                : 'Total Items'}
-              </p>
-            </Card>
-          </Col>
-        </Row>
-
-        <Row className="mt-4">
+        <Row>
           <Col>
             <Card className="p-4">
               <h5 className="fw-bold mb-3">Interactive Power BI Report</h5>
               <div 
                 className="bg-light rounded p-5 text-center"
-                style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ minHeight: '600px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <div>
                   <div className="mb-3">
@@ -198,7 +78,8 @@ const PowerBIViewer: React.FC<PowerBIViewerProps> = ({ menu, onBack }) => {
                   <h6 className="text-muted">Power BI Report: {menu.title}</h6>
                   <p className="text-muted small">
                     Report ID: {menu.powerBIReportId}<br/>
-                    Last Updated: {new Date(reportData.lastUpdated).toLocaleString()}
+                    Last Updated: {new Date(reportData.lastUpdated).toLocaleString()}<br/>
+                    Embed URL: {reportData.embedUrl}
                   </p>
                   <small className="text-muted">
                     * This is a demo. In production, the actual Power BI embed code would render here.
@@ -274,7 +155,7 @@ const PowerBIViewer: React.FC<PowerBIViewerProps> = ({ menu, onBack }) => {
           </Col>
         </Row>
       ) : (
-        renderMockVisualization()
+        renderPowerBIReport()
       )}
     </>
   );
