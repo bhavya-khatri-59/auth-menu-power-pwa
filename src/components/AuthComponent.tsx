@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { User, Phone, Mail, Lock } from 'lucide-react';
 
@@ -7,71 +6,52 @@ interface AuthComponentProps {
   onLogin: (user: { email: string; department: string }) => void;
 }
 
-// Sample database simulation
 const userDatabase = [
   { email: 'name1@gmail.com', department: 'IT', password: 'password123' },
   { email: 'name2@gmail.com', department: 'Sales', password: 'password123' },
   { email: 'bhavya.khatri@gmail.com', department: 'Finance', password: 'password123' },
   { email: 'john.doe@company.com', department: 'HR', password: 'password123' },
   { email: 'sarah.wilson@company.com', department: 'Marketing', password: 'password123' },
-  { email: 'mike.johnson@company.com', department: 'Operations', password: 'password123' }
+  { email: 'mike.johnson@company.com', department: 'Operations', password: 'password123' },
+  { email: 'Bhavya@samunnati.com', department: 'IT', password: 'Welcome@1234' }
 ];
 
 const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
-  const [loginType, setLoginType] = useState<'email' | 'phone' | 'sso'>('email');
-  const [formData, setFormData] = useState({
-    email: '',
-    phone: '',
-    password: ''
-  });
+  const [loginType, setLoginType] = useState<'email' | 'phone' | 'sso'>('sso');
+  const [formData, setFormData] = useState({ email: '', phone: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // ✅ Handle redirect after SSO login
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const email = params.get('email');
+    const department = params.get('department');
+
+    if (email && department) {
+      onLogin({ email, department });
+      window.history.replaceState({}, document.title, '/');
+    }
+  }, [onLogin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    // Simulate API call
     setTimeout(() => {
       try {
-        if (loginType === 'sso') {
-          // Simulate SSO login - automatically pick a user for demo
-          const randomUser = userDatabase[Math.floor(Math.random() * userDatabase.length)];
-          onLogin({
-            email: randomUser.email,
-            department: randomUser.department
-          });
-          return;
-        }
+        if (loginType === 'email' && !formData.email) throw new Error('Email is required');
+        if (loginType === 'phone' && !formData.phone) throw new Error('Phone number is required');
+        if (!formData.password) throw new Error('Password is required');
 
-        if (loginType === 'email' && !formData.email) {
-          throw new Error('Email is required');
-        }
-        if (loginType === 'phone' && !formData.phone) {
-          throw new Error('Phone number is required');
-        }
-        if (!formData.password) {
-          throw new Error('Password is required');
-        }
-
-        // Check against sample database
         if (loginType === 'email') {
           const user = userDatabase.find(u => u.email === formData.email && u.password === formData.password);
-          if (!user) {
-            throw new Error('Invalid email or password');
-          }
-          onLogin({
-            email: user.email,
-            department: user.department
-          });
+          if (!user) throw new Error('Invalid email or password');
+          onLogin({ email: user.email, department: user.department });
         } else {
-          // For phone login, simulate with first user
           const user = userDatabase[0];
-          onLogin({
-            email: formData.phone,
-            department: user.department
-          });
+          onLogin({ email: formData.phone, department: user.department });
         }
       } catch (err) {
         setError((err as Error).message);
@@ -82,25 +62,23 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSSOLogin = () => {
+  const handleSSOLogin = async () => {
     setLoading(true);
     setError('');
-    
-    // Simulate SSO authentication
-    setTimeout(() => {
-      const randomUser = userDatabase[Math.floor(Math.random() * userDatabase.length)];
-      onLogin({
-        email: randomUser.email,
-        department: randomUser.department
-      });
+    try {
+      console.log('SSO Button Clicked');
+      const res = await fetch('http://localhost:4000/auth/login-url');
+      const data = await res.json();
+      console.log('Received URL', data.url);
+      window.location.href = data.url;
+    } catch (err) {
+      console.log('Failed to catch SSO login URL', err);
+      setError('Failed to initiate SSO login');
       setLoading(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -115,40 +93,18 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                 <p className="text-muted">Access your department dashboard</p>
               </div>
 
-              {error && (
-                <Alert variant="danger" className="mb-3">
-                  {error}
-                </Alert>
-              )}
+              {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
 
               <div className="mb-4">
                 <div className="d-flex gap-2 mb-3">
-                  <Button
-                    variant={loginType === 'email' ? 'primary' : 'outline-primary'}
-                    size="sm"
-                    onClick={() => setLoginType('email')}
-                    className="flex-1"
-                  >
-                    <Mail size={16} className="me-1" />
-                    Email
+                  <Button variant={loginType === 'email' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setLoginType('email')} className="flex-1">
+                    <Mail size={16} className="me-1" /> Email
                   </Button>
-                  <Button
-                    variant={loginType === 'phone' ? 'primary' : 'outline-primary'}
-                    size="sm"
-                    onClick={() => setLoginType('phone')}
-                    className="flex-1"
-                  >
-                    <Phone size={16} className="me-1" />
-                    Phone
+                  <Button variant={loginType === 'phone' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setLoginType('phone')} className="flex-1">
+                    <Phone size={16} className="me-1" /> Phone
                   </Button>
-                  <Button
-                    variant={loginType === 'sso' ? 'primary' : 'outline-primary'}
-                    size="sm"
-                    onClick={() => setLoginType('sso')}
-                    className="flex-1"
-                  >
-                    <Lock size={16} className="me-1" />
-                    SSO
+                  <Button variant={loginType === 'sso' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setLoginType('sso')} className="flex-1">
+                    <Lock size={16} className="me-1" /> SSO
                   </Button>
                 </div>
 
@@ -164,14 +120,8 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                     >
                       {loading ? (
                         <>
-                          <Spinner
-                            as="span"
-                            animation="border"
-                            size="sm"
-                            role="status"
-                            className="me-2"
-                          />
-                          Authenticating...
+                          <Spinner as="span" animation="border" size="sm" role="status" className="me-2" />
+                          Redirecting...
                         </>
                       ) : (
                         'Login with SSO'
@@ -218,28 +168,15 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                       />
                     </Form.Group>
 
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      size="lg"
-                      className="w-100 btn-custom"
-                      disabled={loading}
-                    >
+                    <Button type="submit" variant="primary" size="lg" className="w-100 btn-custom" disabled={loading}>
                       {loading ? (
                         <>
-                          <Spinner
-                            as="span"
-                            animation="border"
-                            size="sm"
-                            role="status"
-                            className="me-2"
-                          />
+                          <Spinner as="span" animation="border" size="sm" role="status" className="me-2" />
                           Signing in...
                         </>
                       ) : (
                         <>
-                          <Lock size={18} className="me-2" />
-                          Sign In
+                          <Lock size={18} className="me-2" /> Sign In
                         </>
                       )}
                     </Button>
