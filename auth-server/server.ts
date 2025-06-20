@@ -39,42 +39,48 @@ interface UserInfo {
     res.json({ url });
   });
 
-  // Step 2: Microsoft redirects here after user logs in
-  app.get('/auth/callback', async (req, res) => {
-    try {
-      const params = client.callbackParams(req);
-      const tokenSet = await client.callback(REDIRECT_URI!, params);
-      const userInfo = await client.userinfo(tokenSet.access_token!) as UserInfo;
+ app.get('/auth/callback', async (req, res) => {
+  try {
+    const params = client.callbackParams(req);
+    const tokenSet = await client.callback(REDIRECT_URI!, params);
+    const accessToken = tokenSet.access_token!;
 
-      let email = 'Bhavya@samunnati.com';
-      let department = 'IT';
+    // ✅ Call Microsoft Graph API to get full user details
+    const graphRes = await fetch('https://graph.microsoft.com/v1.0/me', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
 
-      if (typeof userInfo.email === 'string') {
-        email = userInfo.email;
+    const graphUser = await graphRes.json();
+    console.log('🎯 Microsoft Graph user:', graphUser);
 
-        const departmentMap: Record<string, string> = {
-          'bhavya@samunnati.com': 'IT',
-          'john.doe@company.com': 'HR',
-          'name1@gmail.com': 'Finance',
-          'name2@gmail.com': 'Sales',
-          'sarah.wilson@company.com': 'Marketing',
-          'mike.johnson@company.com': 'Operations',
-        };
+    // Prefer `mail`, fallback to `userPrincipalName`
+    const email = graphUser.mail || graphUser.userPrincipalName || 'unknown@example.com';
+    const name = graphUser.displayName || graphUser.givenName || 'User';
+    
+    // Map email to department
+    const departmentMap: Record<string, string> = {
+      'bhavya@samunnati.com': 'IT',
+      'john.doe@company.com': 'HR',
+      'name1@gmail.com': 'Finance',
+      'name2@gmail.com': 'Sales',
+      'sarah.wilson@company.com': 'Marketing',
+      'mike.johnson@company.com': 'Operations',
+    };
 
-        department = departmentMap[email] || 'IT';
-      }
-      email = 'Bhavya@samunnati.com';
-      department = 'IT';
+    const department = departmentMap[email.toLowerCase()] || 'IT';
 
-      // Redirect to frontend with email and department as query params
-      const redirectUrl = `http://localhost:8080?email=${encodeURIComponent(email)}&department=${encodeURIComponent(department)}`;
-      res.redirect(redirectUrl);
+    // Redirect back to frontend with user info
+    const redirectUrl = `http://localhost:8080?email=${encodeURIComponent(email)}&department=${encodeURIComponent(department)}`;
+    res.redirect(redirectUrl);
 
-    } catch (err) {
-      console.error('❌ Auth callback error:', err);
-      res.status(500).send('Authentication failed. Check console for details.');
-    }
-  });
+  } catch (err) {
+    console.error('❌ Auth callback error:', err);
+    res.status(500).send('Authentication failed. Check console for details.');
+  }
+});
+
 
   app.listen(4000, () => {
     console.log('✅ Auth server running at http://localhost:4000');
