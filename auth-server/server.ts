@@ -1,3 +1,4 @@
+
 import express from 'express';
 import { Issuer } from 'openid-client';
 import cors from 'cors';
@@ -64,7 +65,7 @@ const { CLIENT_ID, CLIENT_SECRET, TENANT_ID, REDIRECT_URI, JWT_SECRET } = proces
         'mike.johnson@company.com': 'Operations',
       };
 
-      const department = graphUser.department || departmentMap[email] || 'IT';
+      const department = graphUser.department || departmentMap[email] || 'Data and BI';
 
       // Step 4: Generate signed JWT
       const jwtToken = jwt.sign(

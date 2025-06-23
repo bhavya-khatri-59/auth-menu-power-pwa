@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { User, Phone, Mail, Lock } from 'lucide-react';
@@ -138,7 +139,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                           name="email"
                           value={formData.email}
                           onChange={handleInputChange}
-                          placeholder="Try: bhavya.khatri@gmail.com"
+                          placeholder="Enter your email address"
                           required
                         />
                       </Form.Group>
@@ -163,7 +164,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                         name="password"
                         value={formData.password}
                         onChange={handleInputChange}
-                        placeholder="Try: password123"
+                        placeholder="Enter your password"
                         required
                       />
                     </Form.Group>
@@ -182,12 +183,6 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                     </Button>
                   </Form>
                 )}
-              </div>
-
-              <div className="text-center mt-3">
-                <small className="text-muted">
-                  Demo credentials: bhavya.khatri@gmail.com / password123
-                </small>
               </div>
             </Card.Body>
           </Card>

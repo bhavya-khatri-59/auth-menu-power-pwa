@@ -9,7 +9,9 @@ import {
   Shield, 
   TrendingUp, 
   LogOut,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  Database,
+  LineChart
 } from 'lucide-react';
 import PowerBIViewer from './PowerBIViewer';
 
@@ -144,6 +146,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         description: 'Inventory and logistics performance',
         icon: <TrendingUp className="department-icon text-success" />,
         powerBIReportId: 'supply-chain-002'
+      }
+    ],
+    'Data and BI': [
+      {
+        id: 'data-warehouse',
+        title: 'Data Warehouse Overview',
+        description: 'Data pipeline health and ETL monitoring',
+        icon: <Database className="department-icon text-primary" />,
+        powerBIReportId: 'data-warehouse-001'
+      },
+      {
+        id: 'bi-reports',
+        title: 'BI Reports Dashboard',
+        description: 'Business intelligence reports and KPIs',
+        icon: <BarChart3 className="department-icon text-success" />,
+        powerBIReportId: 'bi-reports-002'
+      },
+      {
+        id: 'analytics-trends',
+        title: 'Analytics & Trends',
+        description: 'Advanced analytics and trend analysis',
+        icon: <LineChart className="department-icon text-warning" />,
+        powerBIReportId: 'analytics-trends-003'
       }
     ]
   };
