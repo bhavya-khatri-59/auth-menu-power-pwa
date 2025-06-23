@@ -14,7 +14,7 @@ const userDatabase = [
   { email: 'john.doe@company.com', department: 'HR', password: 'password123' },
   { email: 'sarah.wilson@company.com', department: 'Marketing', password: 'password123' },
   { email: 'mike.johnson@company.com', department: 'Operations', password: 'password123' },
-  { email: 'Bhavya@samunnati.com', department: 'IT', password: 'Welcome@1234' }
+  { email: 'Bhavya@samunnati.com', department: 'Data and BI', password: 'Welcome@1234' }
 ];
 
 const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
