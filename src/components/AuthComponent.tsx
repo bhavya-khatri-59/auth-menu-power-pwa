@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { User, Phone, Mail, Lock } from 'lucide-react';
@@ -6,16 +5,6 @@ import { User, Phone, Mail, Lock } from 'lucide-react';
 interface AuthComponentProps {
   onLogin: (user: { email: string; department: string }) => void;
 }
-
-const userDatabase = [
-  { email: 'name1@gmail.com', department: 'IT', password: 'password123' },
-  { email: 'name2@gmail.com', department: 'Sales', password: 'password123' },
-  { email: 'bhavya.khatri@gmail.com', department: 'Finance', password: 'password123' },
-  { email: 'john.doe@company.com', department: 'HR', password: 'password123' },
-  { email: 'sarah.wilson@company.com', department: 'Marketing', password: 'password123' },
-  { email: 'mike.johnson@company.com', department: 'Operations', password: 'password123' },
-  { email: 'Bhavya@samunnati.com', department: 'Data and BI', password: 'Welcome@1234' }
-];
 
 const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
   const [loginType, setLoginType] = useState<'email' | 'phone' | 'sso'>('sso');
@@ -26,12 +15,22 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
   // ✅ Handle redirect after SSO login
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const email = params.get('email');
-    const department = params.get('department');
+    const token = params.get('token');
 
-    if (email && department) {
-      onLogin({ email, department });
-      window.history.replaceState({}, document.title, '/');
+    if (token) {
+      try {
+        localStorage.setItem('jwt_token', token);
+        const decoded = JSON.parse(atob(token.split('.')[1]));
+        const user = {
+          email: decoded.email,
+          department: decoded.department,
+        };
+        onLogin(user);
+        localStorage.setItem('user', JSON.stringify(user));
+        window.history.replaceState({}, document.title, '/');
+      } catch (err) {
+        console.error('Failed to decode token:', err);
+      }
     }
   }, [onLogin]);
 
@@ -40,26 +39,36 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
     setLoading(true);
     setError('');
 
-    setTimeout(() => {
-      try {
-        if (loginType === 'email' && !formData.email) throw new Error('Email is required');
-        if (loginType === 'phone' && !formData.phone) throw new Error('Phone number is required');
-        if (!formData.password) throw new Error('Password is required');
+    try {
+      const { email, password } = formData;
+      if (!email || !password) throw new Error('Email and password are required');
 
-        if (loginType === 'email') {
-          const user = userDatabase.find(u => u.email === formData.email && u.password === formData.password);
-          if (!user) throw new Error('Invalid email or password');
-          onLogin({ email: user.email, department: user.department });
-        } else {
-          const user = userDatabase[0];
-          onLogin({ email: formData.phone, department: user.department });
-        }
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
+      const res = await fetch('http://localhost:4000/auth/manual-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Login failed');
       }
-    }, 1500);
+
+      const { token } = await res.json();
+      const decoded = JSON.parse(atob(token.split('.')[1]));
+      const user = {
+        email: decoded.email,
+        department: decoded.department,
+      };
+
+      localStorage.setItem('jwt_token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      onLogin(user);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,13 +79,10 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
     setLoading(true);
     setError('');
     try {
-      console.log('SSO Button Clicked');
       const res = await fetch('http://localhost:4000/auth/login-url');
       const data = await res.json();
-      console.log('Received URL', data.url);
       window.location.href = data.url;
     } catch (err) {
-      console.log('Failed to catch SSO login URL', err);
       setError('Failed to initiate SSO login');
       setLoading(false);
     }
@@ -94,7 +100,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                 <p className="text-muted">Access your department dashboard</p>
               </div>
 
-              {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
+              {error && <Alert variant="danger">{error}</Alert>}
 
               <div className="mb-4">
                 <div className="d-flex gap-2 mb-3">
@@ -112,16 +118,10 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                 {loginType === 'sso' ? (
                   <div className="text-center">
                     <p className="text-muted mb-3">Single Sign-On Authentication</p>
-                    <Button
-                      variant="success"
-                      size="lg"
-                      className="w-100"
-                      onClick={handleSSOLogin}
-                      disabled={loading}
-                    >
+                    <Button variant="success" size="lg" className="w-100" onClick={handleSSOLogin} disabled={loading}>
                       {loading ? (
                         <>
-                          <Spinner as="span" animation="border" size="sm" role="status" className="me-2" />
+                          <Spinner as="span" animation="border" size="sm" className="me-2" />
                           Redirecting...
                         </>
                       ) : (
@@ -131,31 +131,17 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                   </div>
                 ) : (
                   <Form onSubmit={handleSubmit}>
-                    {loginType === 'email' ? (
-                      <Form.Group className="mb-3">
-                        <Form.Label>Email Address</Form.Label>
-                        <Form.Control
-                          type="email"
-                          name="email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          placeholder="Enter your email address"
-                          required
-                        />
-                      </Form.Group>
-                    ) : (
-                      <Form.Group className="mb-3">
-                        <Form.Label>Phone Number</Form.Label>
-                        <Form.Control
-                          type="tel"
-                          name="phone"
-                          value={formData.phone}
-                          onChange={handleInputChange}
-                          placeholder="Enter your phone number"
-                          required
-                        />
-                      </Form.Group>
-                    )}
+                    <Form.Group className="mb-3">
+                      <Form.Label>Email Address</Form.Label>
+                      <Form.Control
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        placeholder="Enter your email address"
+                        required
+                      />
+                    </Form.Group>
 
                     <Form.Group className="mb-4">
                       <Form.Label>Password</Form.Label>
@@ -172,7 +158,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                     <Button type="submit" variant="primary" size="lg" className="w-100 btn-custom" disabled={loading}>
                       {loading ? (
                         <>
-                          <Spinner as="span" animation="border" size="sm" role="status" className="me-2" />
+                          <Spinner as="span" animation="border" size="sm" className="me-2" />
                           Signing in...
                         </>
                       ) : (

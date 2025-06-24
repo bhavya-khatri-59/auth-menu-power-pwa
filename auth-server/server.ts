@@ -141,6 +141,37 @@ const loadReportsData = () => {
       res.status(500).send('Authentication failed.');
     }
   });
+  // POST /auth/manual-login
+app.post('/auth/manual-login', (req, res) => {
+  const { email, password } = req.body;
+
+  const userDatabase = [
+    { email: 'name1@gmail.com', department: 'IT', password: 'password123' },
+    { email: 'name2@gmail.com', department: 'Sales', password: 'password123' },
+    { email: 'bhavya.khatri@gmail.com', department: 'Finance', password: 'password123' },
+    { email: 'john.doe@company.com', department: 'HR', password: 'password123' },
+    { email: 'sarah.wilson@company.com', department: 'Marketing', password: 'password123' },
+    { email: 'mike.johnson@company.com', department: 'Operations', password: 'password123' },
+    { email: 'Bhavya@samunnati.com', department: 'Data and BI', password: 'Welcome@1234' },
+  ];
+
+  const user = userDatabase.find(
+    (u) => u.email === email && u.password === password
+  );
+
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  const token = jwt.sign(
+    { email: user.email, department: user.department },
+    JWT_SECRET!,
+    { expiresIn: '2h' }
+  );
+
+  res.json({ token });
+});
+
 
   app.listen(4000, () => {
     console.log('✅ Auth server running at http://localhost:4000');
