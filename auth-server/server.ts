@@ -41,7 +41,9 @@ const verifyJWT = (req: any, res: any, next: any) => {
 const loadReportsData = () => {
   try {
     const reportsPath = path.join(__dirname, 'reports-data.json');
+    console.log('Loading reports from:', reportsPath);
     const reportsData = fs.readFileSync(reportsPath, 'utf8');
+    console.log('✅ Raw reports JSON:', reportsData);
     return JSON.parse(reportsData);
   } catch (error) {
     console.error('Error loading reports data:', error);
