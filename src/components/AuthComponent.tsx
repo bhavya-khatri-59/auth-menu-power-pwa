@@ -12,7 +12,6 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // ✅ Handle redirect after SSO login
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
@@ -40,13 +39,15 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
     setError('');
 
     try {
-      const { email, password } = formData;
-      if (!email || !password) throw new Error('Email and password are required');
+      const { email, phone, password } = formData;
+      const identifier = loginType === 'email' ? email : phone;
+
+      if (!identifier || !password) throw new Error(`${loginType === 'email' ? 'Email' : 'Phone'} and password are required`);
 
       const res = await fetch('http://localhost:4000/auth/manual-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ [loginType]: identifier, password }),
       });
 
       if (!res.ok) {
@@ -131,17 +132,32 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                   </div>
                 ) : (
                   <Form onSubmit={handleSubmit}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Email Address</Form.Label>
-                      <Form.Control
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="Enter your email address"
-                        required
-                      />
-                    </Form.Group>
+                    {loginType === 'email' && (
+                      <Form.Group className="mb-3">
+                        <Form.Label>Email Address</Form.Label>
+                        <Form.Control
+                          type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          placeholder="Enter your email"
+                          required
+                        />
+                      </Form.Group>
+                    )}
+                    {loginType === 'phone' && (
+                      <Form.Group className="mb-3">
+                        <Form.Label>Phone Number</Form.Label>
+                        <Form.Control
+                          type="tel"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          placeholder="Enter your phone number"
+                          required
+                        />
+                      </Form.Group>
+                    )}
 
                     <Form.Group className="mb-4">
                       <Form.Label>Password</Form.Label>
