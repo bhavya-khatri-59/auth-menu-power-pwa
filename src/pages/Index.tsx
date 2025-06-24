@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import AuthComponent from '../components/AuthComponent';
@@ -36,6 +37,8 @@ const Index = () => {
 
         setUser(userFromToken);
         localStorage.setItem('user', JSON.stringify(userFromToken));
+        // Store the JWT token in localStorage for API calls
+        localStorage.setItem('jwt_token', token);
 
         // Clean URL after storing
         window.history.replaceState({}, '', '/');
@@ -59,6 +62,7 @@ const Index = () => {
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('jwt_token'); // Also remove the JWT token
     console.log('User logged out');
   };
 
