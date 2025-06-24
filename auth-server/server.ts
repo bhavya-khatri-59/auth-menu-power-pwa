@@ -1,3 +1,4 @@
+
 import express from 'express';
 import { Issuer } from 'openid-client';
 import cors from 'cors';
@@ -17,6 +18,24 @@ app.use(cors({
 app.use(express.json());
 
 const { CLIENT_ID, CLIENT_SECRET, TENANT_ID, REDIRECT_URI, JWT_SECRET } = process.env;
+
+// JWT verification middleware
+const verifyJWT = (req: any, res: any, next: any) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  jwt.verify(token, JWT_SECRET!, (err: any, decoded: any) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+    req.user = decoded;
+    next();
+  });
+};
 
 // Load reports data
 const loadReportsData = () => {
@@ -42,14 +61,21 @@ const loadReportsData = () => {
     response_types: ['code'],
   });
 
-  // Reports API endpoint
-  app.get('/api/reports/:department', (req, res) => {
+  // Protected Reports API endpoint with JWT verification
+  app.get('/api/reports/:department', verifyJWT, (req: any, res: any) => {
     try {
       const department = decodeURIComponent(req.params.department);
+      const userDepartment = req.user.department;
+      
+      // Additional security: ensure user can only access their department's reports
+      if (department !== userDepartment) {
+        return res.status(403).json({ error: 'Access denied: Cannot access other department reports' });
+      }
+      
       const reportsData = loadReportsData();
       const departmentReports = reportsData[department] || [];
       
-      console.log(`📊 Fetching reports for department: ${department}`);
+      console.log(`📊 Fetching reports for department: ${department} (user: ${req.user.email})`);
       res.json({ reports: departmentReports });
     } catch (error) {
       console.error('Error fetching reports:', error);

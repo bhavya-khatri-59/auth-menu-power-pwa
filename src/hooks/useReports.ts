@@ -10,7 +10,20 @@ interface Report {
 }
 
 const fetchReports = async (department: string): Promise<Report[]> => {
-  const response = await fetch(`http://localhost:4000/api/reports/${encodeURIComponent(department)}`);
+  // Get JWT token from URL params or localStorage
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token') || localStorage.getItem('jwt_token');
+  
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  const response = await fetch(`http://localhost:4000/api/reports/${encodeURIComponent(department)}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch reports: ${response.statusText}`);
