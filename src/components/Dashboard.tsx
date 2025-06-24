@@ -1,19 +1,13 @@
 
 import React, { useState } from 'react';
-import { Container, Row, Col, Card, Navbar, Nav, Button } from 'react-bootstrap';
+import { Container, Row, Col, Card, Navbar, Nav, Button, Spinner, Alert } from 'react-bootstrap';
 import { 
-  BarChart3, 
-  DollarSign, 
-  Users, 
-  Monitor, 
-  Shield, 
-  TrendingUp, 
   LogOut,
   Menu as MenuIcon,
-  Database,
-  LineChart
 } from 'lucide-react';
 import PowerBIViewer from './PowerBIViewer';
+import ReportIcon from './ReportIcon';
+import { useReports } from '../hooks/useReports';
 
 interface User {
   email: string;
@@ -29,7 +23,7 @@ interface MenuOption {
   id: string;
   title: string;
   description: string;
-  icon: React.ReactNode;
+  icon: string;
   powerBIReportId: string;
 }
 
@@ -37,143 +31,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [selectedMenu, setSelectedMenu] = useState<MenuOption | null>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
-  const departmentMenus: Record<string, MenuOption[]> = {
-    Finance: [
-      {
-        id: 'financial-overview',
-        title: 'Financial Overview',
-        description: 'Revenue, expenses, and profit analysis',
-        icon: <DollarSign className="department-icon text-success" />,
-        powerBIReportId: 'finance-overview-001'
-      },
-      {
-        id: 'budget-analysis',
-        title: 'Budget Analysis',
-        description: 'Budget vs actual spending reports',
-        icon: <BarChart3 className="department-icon text-primary" />,
-        powerBIReportId: 'budget-analysis-002'
-      },
-      {
-        id: 'financial-forecasting',
-        title: 'Financial Forecasting',
-        description: 'Predictive financial models and trends',
-        icon: <TrendingUp className="department-icon text-warning" />,
-        powerBIReportId: 'forecast-003'
-      }
-    ],
-    IT: [
-      {
-        id: 'system-performance',
-        title: 'System Performance',
-        description: 'Server uptime and performance metrics',
-        icon: <Monitor className="department-icon text-info" />,
-        powerBIReportId: 'system-perf-001'
-      },
-      {
-        id: 'security-dashboard',
-        title: 'Security Dashboard',
-        description: 'Security incidents and threat analysis',
-        icon: <Shield className="department-icon text-danger" />,
-        powerBIReportId: 'security-dash-002'
-      },
-      {
-        id: 'user-analytics',
-        title: 'User Analytics',
-        description: 'User activity and system usage',
-        icon: <Users className="department-icon text-primary" />,
-        powerBIReportId: 'user-analytics-003'
-      }
-    ],
-    HR: [
-      {
-        id: 'employee-metrics',
-        title: 'Employee Metrics',
-        description: 'Headcount, turnover, and satisfaction',
-        icon: <Users className="department-icon text-primary" />,
-        powerBIReportId: 'hr-metrics-001'
-      },
-      {
-        id: 'recruitment-analytics',
-        title: 'Recruitment Analytics',
-        description: 'Hiring pipeline and source analysis',
-        icon: <TrendingUp className="department-icon text-success" />,
-        powerBIReportId: 'recruitment-002'
-      }
-    ],
-    Sales: [
-      {
-        id: 'sales-performance',
-        title: 'Sales Performance',
-        description: 'Revenue, targets, and team performance',
-        icon: <TrendingUp className="department-icon text-success" />,
-        powerBIReportId: 'sales-perf-001'
-      },
-      {
-        id: 'customer-analytics',
-        title: 'Customer Analytics',
-        description: 'Customer acquisition and retention',
-        icon: <Users className="department-icon text-info" />,
-        powerBIReportId: 'customer-002'
-      }
-    ],
-    Marketing: [
-      {
-        id: 'campaign-performance',
-        title: 'Campaign Performance',
-        description: 'Marketing ROI and campaign effectiveness',
-        icon: <BarChart3 className="department-icon text-warning" />,
-        powerBIReportId: 'marketing-001'
-      },
-      {
-        id: 'digital-analytics',
-        title: 'Digital Analytics',
-        description: 'Website traffic and social media metrics',
-        icon: <Monitor className="department-icon text-primary" />,
-        powerBIReportId: 'digital-002'
-      }
-    ],
-    Operations: [
-      {
-        id: 'operational-efficiency',
-        title: 'Operational Efficiency',
-        description: 'Process metrics and productivity analysis',
-        icon: <BarChart3 className="department-icon text-info" />,
-        powerBIReportId: 'operations-001'
-      },
-      {
-        id: 'supply-chain',
-        title: 'Supply Chain',
-        description: 'Inventory and logistics performance',
-        icon: <TrendingUp className="department-icon text-success" />,
-        powerBIReportId: 'supply-chain-002'
-      }
-    ],
-    'Data and BI': [
-      {
-        id: 'data-warehouse',
-        title: 'Data Warehouse Overview',
-        description: 'Data pipeline health and ETL monitoring',
-        icon: <Database className="department-icon text-primary" />,
-        powerBIReportId: 'data-warehouse-001'
-      },
-      {
-        id: 'bi-reports',
-        title: 'BI Reports Dashboard',
-        description: 'Business intelligence reports and KPIs',
-        icon: <BarChart3 className="department-icon text-success" />,
-        powerBIReportId: 'bi-reports-002'
-      },
-      {
-        id: 'analytics-trends',
-        title: 'Analytics & Trends',
-        description: 'Advanced analytics and trend analysis',
-        icon: <LineChart className="department-icon text-warning" />,
-        powerBIReportId: 'analytics-trends-003'
-      }
-    ]
-  };
-
-  const currentMenus = departmentMenus[user.department] || [];
+  const { data: reports = [], isLoading, error } = useReports(user.department);
 
   const handleMenuClick = (menu: MenuOption) => {
     setSelectedMenu(menu);
@@ -223,24 +81,42 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               </Col>
             </Row>
 
-            <Row className="g-4">
-              {currentMenus.map((menu) => (
-                <Col key={menu.id} xs={12} sm={6} lg={4}>
-                  <Card 
-                    className="menu-card h-100 p-3"
-                    onClick={() => handleMenuClick(menu)}
-                  >
-                    <Card.Body className="text-center">
-                      {menu.icon}
-                      <h5 className="fw-bold mb-2">{menu.title}</h5>
-                      <p className="text-muted small mb-0">
-                        {menu.description}
-                      </p>
-                    </Card.Body>
-                  </Card>
+            {isLoading ? (
+              <Row>
+                <Col className="text-center">
+                  <Spinner animation="border" variant="primary" />
+                  <p className="mt-2 text-muted">Loading reports...</p>
                 </Col>
-              ))}
-            </Row>
+              </Row>
+            ) : error ? (
+              <Row>
+                <Col>
+                  <Alert variant="danger">
+                    <h6>Error Loading Reports</h6>
+                    Failed to load reports for {user.department} department. Please try again.
+                  </Alert>
+                </Col>
+              </Row>
+            ) : (
+              <Row className="g-4">
+                {reports.map((menu) => (
+                  <Col key={menu.id} xs={12} sm={6} lg={4}>
+                    <Card 
+                      className="menu-card h-100 p-3"
+                      onClick={() => handleMenuClick(menu)}
+                    >
+                      <Card.Body className="text-center">
+                        <ReportIcon iconName={menu.icon} />
+                        <h5 className="fw-bold mb-2">{menu.title}</h5>
+                        <p className="text-muted small mb-0">
+                          {menu.description}
+                        </p>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            )}
           </>
         ) : (
           <PowerBIViewer 

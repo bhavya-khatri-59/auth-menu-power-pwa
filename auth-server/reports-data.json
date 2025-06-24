@@ -1,0 +1,136 @@
+
+{
+  "Finance": [
+    {
+      "id": "financial-overview",
+      "title": "Financial Overview",
+      "description": "Revenue, expenses, and profit analysis",
+      "icon": "DollarSign",
+      "powerBIReportId": "finance-overview-001"
+    },
+    {
+      "id": "budget-analysis",
+      "title": "Budget Analysis",
+      "description": "Budget vs actual spending reports",
+      "icon": "BarChart3",
+      "powerBIReportId": "budget-analysis-002"
+    },
+    {
+      "id": "financial-forecasting",
+      "title": "Financial Forecasting",
+      "description": "Predictive financial models and trends",
+      "icon": "TrendingUp",
+      "powerBIReportId": "forecast-003"
+    }
+  ],
+  "IT": [
+    {
+      "id": "system-performance",
+      "title": "System Performance",
+      "description": "Server uptime and performance metrics",
+      "icon": "Monitor",
+      "powerBIReportId": "system-perf-001"
+    },
+    {
+      "id": "security-dashboard",
+      "title": "Security Dashboard",
+      "description": "Security incidents and threat analysis",
+      "icon": "Shield",
+      "powerBIReportId": "security-dash-002"
+    },
+    {
+      "id": "user-analytics",
+      "title": "User Analytics",
+      "description": "User activity and system usage",
+      "icon": "Users",
+      "powerBIReportId": "user-analytics-003"
+    }
+  ],
+  "HR": [
+    {
+      "id": "employee-metrics",
+      "title": "Employee Metrics",
+      "description": "Headcount, turnover, and satisfaction",
+      "icon": "Users",
+      "powerBIReportId": "hr-metrics-001"
+    },
+    {
+      "id": "recruitment-analytics",
+      "title": "Recruitment Analytics",
+      "description": "Hiring pipeline and source analysis",
+      "icon": "TrendingUp",
+      "powerBIReportId": "recruitment-002"
+    }
+  ],
+  "Sales": [
+    {
+      "id": "sales-performance",
+      "title": "Sales Performance",
+      "description": "Revenue, targets, and team performance",
+      "icon": "TrendingUp",
+      "powerBIReportId": "sales-perf-001"
+    },
+    {
+      "id": "customer-analytics",
+      "title": "Customer Analytics",
+      "description": "Customer acquisition and retention",
+      "icon": "Users",
+      "powerBIReportId": "customer-002"
+    }
+  ],
+  "Marketing": [
+    {
+      "id": "campaign-performance",
+      "title": "Campaign Performance",
+      "description": "Marketing ROI and campaign effectiveness",
+      "icon": "BarChart3",
+      "powerBIReportId": "marketing-001"
+    },
+    {
+      "id": "digital-analytics",
+      "title": "Digital Analytics",
+      "description": "Website traffic and social media metrics",
+      "icon": "Monitor",
+      "powerBIReportId": "digital-002"
+    }
+  ],
+  "Operations": [
+    {
+      "id": "operational-efficiency",
+      "title": "Operational Efficiency",
+      "description": "Process metrics and productivity analysis",
+      "icon": "BarChart3",
+      "powerBIReportId": "operations-001"
+    },
+    {
+      "id": "supply-chain",
+      "title": "Supply Chain",
+      "description": "Inventory and logistics performance",
+      "icon": "TrendingUp",
+      "powerBIReportId": "supply-chain-002"
+    }
+  ],
+  "Data and BI": [
+    {
+      "id": "data-warehouse",
+      "title": "Data Warehouse Overview",
+      "description": "Data pipeline health and ETL monitoring",
+      "icon": "Database",
+      "powerBIReportId": "data-warehouse-001"
+    },
+    {
+      "id": "bi-reports",
+      "title": "BI Reports Dashboard",
+      "description": "Business intelligence reports and KPIs",
+      "icon": "BarChart3",
+      "powerBIReportId": "bi-reports-002"
+    },
+    {
+      "id": "analytics-trends",
+      "title": "Analytics & Trends",
+      "description": "Advanced analytics and trend analysis",
+      "icon": "LineChart",
+      "powerBIReportId": "analytics-trends-003"
+    }
+  ]
+}

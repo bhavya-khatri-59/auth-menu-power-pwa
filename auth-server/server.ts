@@ -1,9 +1,10 @@
-
 import express from 'express';
 import { Issuer } from 'openid-client';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
+import fs from 'fs';
+import path from 'path';
 
 dotenv.config();
 
@@ -13,7 +14,21 @@ app.use(cors({
   credentials: true,
 }));
 
+app.use(express.json());
+
 const { CLIENT_ID, CLIENT_SECRET, TENANT_ID, REDIRECT_URI, JWT_SECRET } = process.env;
+
+// Load reports data
+const loadReportsData = () => {
+  try {
+    const reportsPath = path.join(__dirname, 'reports-data.json');
+    const reportsData = fs.readFileSync(reportsPath, 'utf8');
+    return JSON.parse(reportsData);
+  } catch (error) {
+    console.error('Error loading reports data:', error);
+    return {};
+  }
+};
 
 (async () => {
   const issuer = await Issuer.discover(
@@ -25,6 +40,21 @@ const { CLIENT_ID, CLIENT_SECRET, TENANT_ID, REDIRECT_URI, JWT_SECRET } = proces
     client_secret: CLIENT_SECRET!,
     redirect_uris: [REDIRECT_URI!],
     response_types: ['code'],
+  });
+
+  // Reports API endpoint
+  app.get('/api/reports/:department', (req, res) => {
+    try {
+      const department = decodeURIComponent(req.params.department);
+      const reportsData = loadReportsData();
+      const departmentReports = reportsData[department] || [];
+      
+      console.log(`📊 Fetching reports for department: ${department}`);
+      res.json({ reports: departmentReports });
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      res.status(500).json({ error: 'Failed to fetch reports' });
+    }
   });
 
   // Step 1: Get Microsoft login URL
