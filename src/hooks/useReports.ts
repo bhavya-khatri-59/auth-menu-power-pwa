@@ -1,5 +1,6 @@
 
 import { useQuery } from '@tanstack/react-query';
+import { API_ENDPOINTS } from '../config/api';
 
 interface Report {
   id: string;
@@ -18,7 +19,7 @@ const fetchReports = async (department: string): Promise<Report[]> => {
     throw new Error('No authentication token found');
   }
 
-  const response = await fetch(`http://localhost:4000/api/reports/${encodeURIComponent(department)}`, {
+  const response = await fetch(API_ENDPOINTS.reports(department), {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',

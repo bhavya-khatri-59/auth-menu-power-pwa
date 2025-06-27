@@ -9,8 +9,18 @@ import path from 'path';
 dotenv.config();
 
 const app = express();
+
+// Get port from environment variable or default to 4000
+const PORT = process.env.PORT || 4000;
+
+// Update CORS to allow your Azure frontend domain
+const allowedOrigins = [
+  'http://localhost:8080',
+  process.env.FRONTEND_URL || 'https://your-frontend-app.azurewebsites.net'
+];
+
 app.use(cors({
-  origin: 'http://localhost:8080',
+  origin: allowedOrigins,
   credentials: true,
 }));
 app.use(express.json());
@@ -94,7 +104,7 @@ app.get('/auth/login-url', async (req, res) => {
   res.json({ url });
 });
 
-// 🟩 SSO Callback
+// 🟩 SSO Callback - Update redirect URL for production
 app.get('/auth/callback', async (req, res) => {
   try {
     const issuer = await Issuer.discover(
@@ -136,7 +146,9 @@ app.get('/auth/callback', async (req, res) => {
       { expiresIn: '2h' }
     );
 
-    const redirectUrl = `http://localhost:8080?token=${jwtToken}`;
+    // Use environment variable for frontend URL
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+    const redirectUrl = `${frontendUrl}?token=${jwtToken}`;
     res.redirect(redirectUrl);
 
   } catch (err) {
@@ -170,6 +182,6 @@ app.post('/auth/manual-login', (req, res) => {
   res.json({ token });
 });
 
-app.listen(4000, () => {
-  console.log('✅ Auth server running at http://localhost:4000');
+app.listen(PORT, () => {
+  console.log(`✅ Auth server running at http://localhost:${PORT}`);
 });

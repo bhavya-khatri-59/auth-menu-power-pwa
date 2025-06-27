@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { User, Phone, Mail, Lock } from 'lucide-react';
+import { API_ENDPOINTS } from '../config/api';
 
 interface AuthComponentProps {
   onLogin: (user: { email: string; department: string }) => void;
@@ -44,7 +46,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
 
       if (!identifier || !password) throw new Error(`${loginType === 'email' ? 'Email' : 'Phone'} and password are required`);
 
-      const res = await fetch('http://localhost:4000/auth/manual-login', {
+      const res = await fetch(API_ENDPOINTS.manualLogin, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [loginType]: identifier, password }),
@@ -80,7 +82,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:4000/auth/login-url');
+      const res = await fetch(API_ENDPOINTS.loginUrl);
       const data = await res.json();
       window.location.href = data.url;
     } catch (err) {

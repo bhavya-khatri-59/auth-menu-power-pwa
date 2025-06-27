@@ -1,9 +1,12 @@
+
 {
   "name": "auth-server",
   "type": "commonjs",
-  "main": "server.ts",
+  "main": "dist/server.js",
   "scripts": {
-    "dev": "ts-node --project tsconfig.server.json server.ts"
+    "dev": "ts-node --project tsconfig.server.json server.ts",
+    "build": "tsc --project tsconfig.server.json",
+    "start": "node dist/server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
