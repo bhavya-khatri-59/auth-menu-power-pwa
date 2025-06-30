@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Navbar, Nav, Button, Spinner, Alert } from 'react-bootstrap';
-import { LogOut, Shield, FileText, Users, Activity } from 'lucide-react';
+import { Container, Row, Col, Card, Navbar, Nav, Button, Spinner, Alert, Tabs, Tab } from 'react-bootstrap';
+import { LogOut, Shield, FileText, Users, Activity, Building, Eye } from 'lucide-react';
 import AdminReportsEditor from './AdminReportsEditor';
+import AdminDepartmentManager from './AdminDepartmentManager';
+import AdminReportsViewer from './AdminReportsViewer';
 import { API_ENDPOINTS } from '../config/api';
 
 interface User {
@@ -24,6 +26,7 @@ interface AdminStats {
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     fetchAdminStats();
@@ -83,7 +86,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
               Admin Dashboard
             </h2>
             <p className="text-muted">
-              Manage reports and PowerBI configurations for all departments
+              Manage reports, departments, and PowerBI configurations
             </p>
           </Col>
         </Row>
@@ -122,8 +125,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         <Row>
           <Col>
             <Card className="p-4">
-              <h4 className="mb-4">Reports Management</h4>
-              <AdminReportsEditor onStatsUpdate={fetchAdminStats} />
+              <Tabs activeKey={activeTab} onSelect={(k) => setActiveTab(k || 'overview')} className="mb-4">
+                <Tab eventKey="overview" title={<span><FileText size={16} className="me-1" />Reports Management</span>}>
+                  <AdminReportsEditor onStatsUpdate={fetchAdminStats} />
+                </Tab>
+                <Tab eventKey="departments" title={<span><Building size={16} className="me-1" />Departments</span>}>
+                  <AdminDepartmentManager onDepartmentChange={fetchAdminStats} />
+                </Tab>
+                <Tab eventKey="viewer" title={<span><Eye size={16} className="me-1" />View Reports</span>}>
+                  <AdminReportsViewer />
+                </Tab>
+              </Tabs>
             </Card>
           </Col>
         </Row>

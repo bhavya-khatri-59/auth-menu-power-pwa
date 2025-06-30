@@ -192,6 +192,93 @@ app.get('/api/admin/stats', verifyJWT, verifyAdmin, (req: any, res: any) => {
   }
 });
 
+// 🟩 Admin endpoint to get all departments
+app.get('/api/admin/departments', verifyJWT, verifyAdmin, (req: any, res: any) => {
+  try {
+    const reportsData = loadReportsData();
+    const departments = Object.keys(reportsData);
+    res.json({ departments });
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    res.status(500).json({ error: 'Failed to fetch departments' });
+  }
+});
+
+// 🟩 Admin endpoint to add a new department
+app.post('/api/admin/departments', verifyJWT, verifyAdmin, (req: any, res: any) => {
+  try {
+    const { departmentName } = req.body;
+    
+    if (!departmentName || typeof departmentName !== 'string') {
+      return res.status(400).json({ error: 'Department name is required' });
+    }
+    
+    const reportsData = loadReportsData();
+    
+    if (reportsData[departmentName]) {
+      return res.status(400).json({ error: 'Department already exists' });
+    }
+    
+    reportsData[departmentName] = [];
+    const success = saveReportsData(reportsData);
+    
+    if (success) {
+      res.json({ message: 'Department added successfully', department: departmentName });
+    } else {
+      res.status(500).json({ error: 'Failed to save department' });
+    }
+  } catch (error) {
+    console.error('Error adding department:', error);
+    res.status(500).json({ error: 'Failed to add department' });
+  }
+});
+
+// 🟩 Admin endpoint to delete a department
+app.delete('/api/admin/departments/:departmentName', verifyJWT, verifyAdmin, (req: any, res: any) => {
+  try {
+    const { departmentName } = req.params;
+    const reportsData = loadReportsData();
+    
+    if (!reportsData[departmentName]) {
+      return res.status(404).json({ error: 'Department not found' });
+    }
+    
+    delete reportsData[departmentName];
+    const success = saveReportsData(reportsData);
+    
+    if (success) {
+      res.json({ message: 'Department deleted successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to delete department' });
+    }
+  } catch (error) {
+    console.error('Error deleting department:', error);
+    res.status(500).json({ error: 'Failed to delete department' });
+  }
+});
+
+// 🟩 Admin endpoint to get all reports from all departments
+app.get('/api/admin/all-reports', verifyJWT, verifyAdmin, (req: any, res: any) => {
+  try {
+    const reportsData = loadReportsData();
+    const allReports = [];
+    
+    for (const [department, reports] of Object.entries(reportsData)) {
+      for (const report of reports as any[]) {
+        allReports.push({
+          ...report,
+          department
+        });
+      }
+    }
+    
+    res.json({ reports: allReports });
+  } catch (error) {
+    console.error('Error fetching all reports:', error);
+    res.status(500).json({ error: 'Failed to fetch all reports' });
+  }
+});
+
 // 🟩 Microsoft SSO URL
 app.get('/auth/login-url', async (req, res) => {
   const issuer = await Issuer.discover(

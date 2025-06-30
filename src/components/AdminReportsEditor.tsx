@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Form, Alert, Spinner, Modal, Accordion } from 'react-bootstrap';
-import { Plus, Edit, Trash2, Save, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, ToggleLeft, ToggleRight, Eye } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 
 interface Report {
@@ -115,6 +114,21 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
       updatedReportsData[department][reportIndex].isActive = !updatedReportsData[department][reportIndex].isActive;
       setReportsData(updatedReportsData);
     }
+  };
+
+  const handleViewReport = (report: Report) => {
+    // Create a menu object for PowerBIViewer
+    const menu = {
+      id: report.id,
+      title: report.title,
+      description: report.description,
+      icon: <span>{report.icon}</span>,
+      powerBIReportId: report.powerBIReportId
+    };
+    
+    // You could either open in a new tab or use a modal
+    // For now, let's just show an alert with the report info
+    alert(`Viewing report: ${report.title}\nPowerBI ID: ${report.powerBIReportId}`);
   };
 
   const handleEditReport = (department: string, report: Report) => {
@@ -265,7 +279,16 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                           <strong>PowerBI ID:</strong> {report.powerBIReportId}<br/>
                           <strong>Client ID:</strong> {report.clientId?.substring(0, 8) || 'Not set'}...
                         </p>
-                        <div className="d-flex gap-2">
+                        <div className="d-flex gap-2 flex-wrap">
+                          <Button
+                            variant="outline-success"
+                            size="sm"
+                            onClick={() => handleViewReport(report)}
+                            disabled={!report.isActive}
+                            title="View Report"
+                          >
+                            <Eye size={14} />
+                          </Button>
                           <Button
                             variant="outline-primary"
                             size="sm"
