@@ -83,7 +83,7 @@ const userDatabase = [
   { email: 'sarah.wilson@company.com', phone: '9991110005', department: 'Marketing', password: 'password123', isAdmin: false },
   { email: 'mike.johnson@company.com', phone: '9991110006', department: 'Operations', password: 'password123', isAdmin: false },
   { email: 'Bhavya@samunnati.com', phone: '9991110007', department: 'Data and BI', password: 'Welcome@1234', isAdmin: false },
-  { email: 'admin', phone: '', department: 'Admin', password: 'admin123', isAdmin: true }
+  { email: 'admin@samunnati.com', phone: '', department: 'Admin', password: 'admin123', isAdmin: true }
 ];
 
 // 🟩 Protected endpoint
