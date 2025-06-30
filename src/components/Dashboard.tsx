@@ -4,6 +4,7 @@ import { Container, Row, Col, Card, Navbar, Nav, Button, Spinner, Alert } from '
 import { 
   LogOut,
   Menu as MenuIcon,
+  FileText,
 } from 'lucide-react';
 import PowerBIViewer from './PowerBIViewer';
 import ReportIcon from './ReportIcon';
@@ -32,6 +33,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const { data: reports = [], isLoading, error } = useReports(user.department);
+
+  // Filter active reports for regular users
+  const activeReports = reports.filter(report => report.isActive !== false);
 
   const handleMenuClick = (menu: MenuOption) => {
     setSelectedMenu(menu);
@@ -81,6 +85,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               </Col>
             </Row>
 
+            {/* Summary Cards */}
+            <Row className="mb-4">
+              <Col md={4}>
+                <Card className="text-center p-3 bg-primary text-white">
+                  <Card.Body>
+                    <FileText size={32} className="mb-2" />
+                    <h4 className="fw-bold">{activeReports.length}</h4>
+                    <p className="mb-0">Available Reports</p>
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
+
             {isLoading ? (
               <Row>
                 <Col className="text-center">
@@ -99,7 +116,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               </Row>
             ) : (
               <Row className="g-4">
-                {reports.map((menu) => (
+                {activeReports.map((menu) => (
                   <Col key={menu.id} xs={12} sm={6} lg={4}>
                     <Card 
                       className="menu-card h-100 p-3"

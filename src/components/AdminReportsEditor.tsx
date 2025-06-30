@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Form, Alert, Spinner, Modal, Accordion } from 'react-bootstrap';
-import { Plus, Edit, Trash2, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, ToggleLeft, ToggleRight } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 
 interface Report {
@@ -10,13 +10,21 @@ interface Report {
   description: string;
   icon: string;
   powerBIReportId: string;
+  clientId: string;
+  reportId: string;
+  embedId: string;
+  isActive: boolean;
 }
 
 interface ReportsData {
   [department: string]: Report[];
 }
 
-const AdminReportsEditor: React.FC = () => {
+interface AdminReportsEditorProps {
+  onStatsUpdate?: () => void;
+}
+
+const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }) => {
   const [reportsData, setReportsData] = useState<ReportsData>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -31,7 +39,11 @@ const AdminReportsEditor: React.FC = () => {
     title: '',
     description: '',
     icon: '',
-    powerBIReportId: ''
+    powerBIReportId: '',
+    clientId: '',
+    reportId: '',
+    embedId: '',
+    isActive: true
   });
 
   useEffect(() => {
@@ -84,10 +96,24 @@ const AdminReportsEditor: React.FC = () => {
 
       setSuccess('Reports data saved successfully!');
       setTimeout(() => setSuccess(''), 3000);
+      
+      // Update stats if callback provided
+      if (onStatsUpdate) {
+        onStatsUpdate();
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const toggleReportStatus = (department: string, reportId: string) => {
+    const updatedReportsData = { ...reportsData };
+    const reportIndex = updatedReportsData[department].findIndex(r => r.id === reportId);
+    if (reportIndex !== -1) {
+      updatedReportsData[department][reportIndex].isActive = !updatedReportsData[department][reportIndex].isActive;
+      setReportsData(updatedReportsData);
     }
   };
 
@@ -99,7 +125,11 @@ const AdminReportsEditor: React.FC = () => {
       title: report.title,
       description: report.description,
       icon: report.icon,
-      powerBIReportId: report.powerBIReportId
+      powerBIReportId: report.powerBIReportId,
+      clientId: report.clientId || '',
+      reportId: report.reportId || '',
+      embedId: report.embedId || '',
+      isActive: report.isActive !== false
     });
     setShowModal(true);
   };
@@ -112,7 +142,11 @@ const AdminReportsEditor: React.FC = () => {
       title: '',
       description: '',
       icon: '',
-      powerBIReportId: ''
+      powerBIReportId: '',
+      clientId: '',
+      reportId: '',
+      embedId: '',
+      isActive: true
     });
     setShowModal(true);
   };
@@ -160,7 +194,7 @@ const AdminReportsEditor: React.FC = () => {
       <Row className="mb-4">
         <Col>
           <div className="d-flex justify-content-between align-items-center">
-            <h4>Reports Management</h4>
+            <h5>Manage Reports & PowerBI Configuration</h5>
             <Button
               variant="primary"
               onClick={saveReportsData}
@@ -189,7 +223,9 @@ const AdminReportsEditor: React.FC = () => {
       <Accordion>
         {Object.entries(reportsData).map(([department, reports]) => (
           <Accordion.Item key={department} eventKey={department}>
-            <Accordion.Header>{department} Department ({reports.length} reports)</Accordion.Header>
+            <Accordion.Header>
+              {department} Department ({reports.length} reports, {reports.filter(r => r.isActive !== false).length} active)
+            </Accordion.Header>
             <Accordion.Body>
               <div className="mb-3">
                 <Button
@@ -206,13 +242,28 @@ const AdminReportsEditor: React.FC = () => {
               <Row className="g-3">
                 {reports.map((report) => (
                   <Col key={report.id} md={6} lg={4}>
-                    <Card className="h-100">
+                    <Card className={`h-100 ${report.isActive === false ? 'opacity-50' : ''}`}>
                       <Card.Body>
-                        <h6 className="fw-bold">{report.title}</h6>
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <h6 className="fw-bold">{report.title}</h6>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="p-0"
+                            onClick={() => toggleReportStatus(department, report.id)}
+                          >
+                            {report.isActive !== false ? 
+                              <ToggleRight size={20} className="text-success" /> : 
+                              <ToggleLeft size={20} className="text-muted" />
+                            }
+                          </Button>
+                        </div>
                         <p className="text-muted small mb-2">{report.description}</p>
                         <p className="text-muted small mb-2">
+                          <strong>Status:</strong> {report.isActive !== false ? 'Active' : 'Inactive'}<br/>
                           <strong>Icon:</strong> {report.icon}<br/>
-                          <strong>PowerBI ID:</strong> {report.powerBIReportId}
+                          <strong>PowerBI ID:</strong> {report.powerBIReportId}<br/>
+                          <strong>Client ID:</strong> {report.clientId?.substring(0, 8) || 'Not set'}...
                         </p>
                         <div className="d-flex gap-2">
                           <Button
@@ -240,7 +291,7 @@ const AdminReportsEditor: React.FC = () => {
         ))}
       </Accordion>
 
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
+      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>
             {editingReport ? 'Edit Report' : 'Add New Report'} - {editingDepartment}
@@ -248,15 +299,31 @@ const AdminReportsEditor: React.FC = () => {
         </Modal.Header>
         <Modal.Body>
           <Form>
-            <Form.Group className="mb-3">
-              <Form.Label>Report ID</Form.Label>
-              <Form.Control
-                type="text"
-                value={formData.id}
-                onChange={(e) => setFormData({...formData, id: e.target.value})}
-                placeholder="unique-report-id"
-              />
-            </Form.Group>
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Report ID</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.id}
+                    onChange={(e) => setFormData({...formData, id: e.target.value})}
+                    placeholder="unique-report-id"
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Status</Form.Label>
+                  <Form.Select
+                    value={formData.isActive ? 'active' : 'inactive'}
+                    onChange={(e) => setFormData({...formData, isActive: e.target.value === 'active'})}
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            </Row>
             <Form.Group className="mb-3">
               <Form.Label>Title</Form.Label>
               <Form.Control
@@ -276,22 +343,55 @@ const AdminReportsEditor: React.FC = () => {
                 placeholder="Report description"
               />
             </Form.Group>
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Icon</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.icon}
+                    onChange={(e) => setFormData({...formData, icon: e.target.value})}
+                    placeholder="DollarSign, BarChart3, TrendingUp, etc."
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>PowerBI Report ID</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.powerBIReportId}
+                    onChange={(e) => setFormData({...formData, powerBIReportId: e.target.value})}
+                    placeholder="powerbi-report-id"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
             <Form.Group className="mb-3">
-              <Form.Label>Icon</Form.Label>
+              <Form.Label>Client ID</Form.Label>
               <Form.Control
                 type="text"
-                value={formData.icon}
-                onChange={(e) => setFormData({...formData, icon: e.target.value})}
-                placeholder="DollarSign, BarChart3, TrendingUp, etc."
+                value={formData.clientId}
+                onChange={(e) => setFormData({...formData, clientId: e.target.value})}
+                placeholder="Azure AD Client ID"
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>PowerBI Report ID</Form.Label>
+              <Form.Label>Report ID</Form.Label>
               <Form.Control
                 type="text"
-                value={formData.powerBIReportId}
-                onChange={(e) => setFormData({...formData, powerBIReportId: e.target.value})}
-                placeholder="powerbi-report-id"
+                value={formData.reportId}
+                onChange={(e) => setFormData({...formData, reportId: e.target.value})}
+                placeholder="PowerBI Report ID"
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Embed URL</Form.Label>
+              <Form.Control
+                type="url"
+                value={formData.embedId}
+                onChange={(e) => setFormData({...formData, embedId: e.target.value})}
+                placeholder="https://app.powerbi.com/reportEmbed?reportId=..."
               />
             </Form.Group>
           </Form>

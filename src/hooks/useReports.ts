@@ -8,6 +8,7 @@ interface Report {
   description: string;
   icon: string;
   powerBIReportId: string;
+  isActive?: boolean;
 }
 
 const fetchReports = async (department: string): Promise<Report[]> => {
