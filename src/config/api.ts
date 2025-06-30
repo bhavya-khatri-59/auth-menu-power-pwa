@@ -10,4 +10,5 @@ export const API_ENDPOINTS = {
   adminUpdateReports: `${API_BASE_URL}/api/admin/reports`,
   adminUpdateReport: (department: string, reportId: string) => 
     `${API_BASE_URL}/api/admin/reports/${encodeURIComponent(department)}/${encodeURIComponent(reportId)}`,
+  adminStats: `${API_BASE_URL}/api/admin/stats`,
 } as const;

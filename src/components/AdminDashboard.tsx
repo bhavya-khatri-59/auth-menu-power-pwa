@@ -1,9 +1,8 @@
-
-import React, { useState } from 'react';
-import { Container, Row, Col, Card, Navbar, Nav, Button, Tab, Tabs } from 'react-bootstrap';
-import { LogOut, Shield } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Navbar, Nav, Button, Spinner, Alert } from 'react-bootstrap';
+import { LogOut, Shield, FileText, Users, Activity } from 'lucide-react';
 import AdminReportsEditor from './AdminReportsEditor';
-import AdminPowerBIEditor from './AdminPowerBIEditor';
+import { API_ENDPOINTS } from '../config/api';
 
 interface User {
   email: string;
@@ -16,7 +15,41 @@ interface AdminDashboardProps {
   onLogout: () => void;
 }
 
+interface AdminStats {
+  totalUsers: number;
+  totalReports: number;
+  activeReports: number;
+}
+
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAdminStats();
+  }, []);
+
+  const fetchAdminStats = async () => {
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const response = await fetch(API_ENDPOINTS.adminStats, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      }
+    } catch (error) {
+      console.error('Error fetching admin stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="app-container">
       <Navbar className="navbar-custom" expand="lg" variant="dark">
@@ -55,21 +88,42 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           </Col>
         </Row>
 
+        {/* Admin Summary Cards */}
+        <Row className="mb-4">
+          <Col md={4}>
+            <Card className="text-center p-3 bg-primary text-white">
+              <Card.Body>
+                <FileText size={32} className="mb-2" />
+                <h4 className="fw-bold">{loading ? '...' : stats?.totalReports || 0}</h4>
+                <p className="mb-0">Total Reports</p>
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col md={4}>
+            <Card className="text-center p-3 bg-success text-white">
+              <Card.Body>
+                <Activity size={32} className="mb-2" />
+                <h4 className="fw-bold">{loading ? '...' : stats?.activeReports || 0}</h4>
+                <p className="mb-0">Active Reports</p>
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col md={4}>
+            <Card className="text-center p-3 bg-info text-white">
+              <Card.Body>
+                <Users size={32} className="mb-2" />
+                <h4 className="fw-bold">{loading ? '...' : stats?.totalUsers || 0}</h4>
+                <p className="mb-0">Total Users</p>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+
         <Row>
           <Col>
             <Card className="p-4">
-              <Tabs defaultActiveKey="reports" id="admin-tabs">
-                <Tab eventKey="reports" title="Reports Management">
-                  <div className="mt-4">
-                    <AdminReportsEditor />
-                  </div>
-                </Tab>
-                <Tab eventKey="powerbi" title="PowerBI Management">
-                  <div className="mt-4">
-                    <AdminPowerBIEditor />
-                  </div>
-                </Tab>
-              </Tabs>
+              <h4 className="mb-4">Reports Management</h4>
+              <AdminReportsEditor onStatsUpdate={fetchAdminStats} />
             </Card>
           </Col>
         </Row>

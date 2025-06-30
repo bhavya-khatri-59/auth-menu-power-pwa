@@ -1,4 +1,3 @@
-
 import express from 'express';
 import { Issuer } from 'openid-client';
 import cors from 'cors';
@@ -165,6 +164,31 @@ app.put('/api/admin/reports/:department/:reportId', verifyJWT, verifyAdmin, (req
   } catch (error) {
     console.error('Error updating report:', error);
     res.status(500).json({ error: 'Failed to update report' });
+  }
+});
+
+// 🟩 Admin endpoint to get user statistics
+app.get('/api/admin/stats', verifyJWT, verifyAdmin, (req: any, res: any) => {
+  try {
+    const totalUsers = userDatabase.length;
+    const reportsData = loadReportsData();
+    
+    let totalReports = 0;
+    let activeReports = 0;
+    
+    Object.values(reportsData).forEach((departmentReports: any) => {
+      totalReports += departmentReports.length;
+      activeReports += departmentReports.filter((report: any) => report.isActive).length;
+    });
+    
+    res.json({
+      totalUsers,
+      totalReports,
+      activeReports
+    });
+  } catch (error) {
+    console.error('Error fetching admin stats:', error);
+    res.status(500).json({ error: 'Failed to fetch admin statistics' });
   }
 });
 
