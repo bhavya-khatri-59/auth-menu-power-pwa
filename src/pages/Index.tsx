@@ -41,7 +41,6 @@ const Index = () => {
 
         setUser(userFromToken);
         localStorage.setItem('user', JSON.stringify(userFromToken));
-        // Store the JWT token in localStorage for API calls
         localStorage.setItem('jwt_token', token);
 
         // Clean URL after storing
@@ -58,15 +57,20 @@ const Index = () => {
   }, []);
 
   const handleLogin = (userData: User) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    console.log('User logged in:', userData);
+    // Make sure to preserve the isAdmin flag when logging in
+    const userWithAdmin = {
+      ...userData,
+      isAdmin: userData.isAdmin || false
+    };
+    setUser(userWithAdmin);
+    localStorage.setItem('user', JSON.stringify(userWithAdmin));
+    console.log('User logged in:', userWithAdmin);
   };
 
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('user');
-    localStorage.removeItem('jwt_token'); // Also remove the JWT token
+    localStorage.removeItem('jwt_token');
     console.log('User logged out');
   };
 

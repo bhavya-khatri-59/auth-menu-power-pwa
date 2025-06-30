@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { User, Phone, Mail, Lock } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 
 interface AuthComponentProps {
-  onLogin: (user: { email: string; department: string }) => void;
+  onLogin: (user: { email: string; department: string; isAdmin?: boolean }) => void;
 }
 
 const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
@@ -25,6 +24,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
         const user = {
           email: decoded.email,
           department: decoded.department,
+          isAdmin: decoded.isAdmin || false
         };
         onLogin(user);
         localStorage.setItem('user', JSON.stringify(user));
@@ -62,6 +62,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
       const user = {
         email: decoded.email,
         department: decoded.department,
+        isAdmin: decoded.isAdmin || false
       };
 
       localStorage.setItem('jwt_token', token);
