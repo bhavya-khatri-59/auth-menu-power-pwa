@@ -3,15 +3,18 @@ import React, { useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import AuthComponent from '../components/AuthComponent';
 import Dashboard from '../components/Dashboard';
+import AdminDashboard from '../components/AdminDashboard';
 
 interface User {
   email: string;
   department: string;
+  isAdmin?: boolean;
 }
 
 interface DecodedToken {
   email: string;
   department: string;
+  isAdmin?: boolean;
   exp?: number;
 }
 
@@ -32,7 +35,8 @@ const Index = () => {
 
         const userFromToken: User = {
           email: decoded.email,
-          department: decoded.department
+          department: decoded.department,
+          isAdmin: decoded.isAdmin || false
         };
 
         setUser(userFromToken);
@@ -69,7 +73,11 @@ const Index = () => {
   return (
     <>
       {user ? (
-        <Dashboard user={user} onLogout={handleLogout} />
+        user.isAdmin ? (
+          <AdminDashboard user={user} onLogout={handleLogout} />
+        ) : (
+          <Dashboard user={user} onLogout={handleLogout} />
+        )
       ) : (
         <AuthComponent onLogin={handleLogin} />
       )}

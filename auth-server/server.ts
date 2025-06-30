@@ -1,3 +1,4 @@
+
 import express from 'express';
 import { Issuer } from 'openid-client';
 import cors from 'cors';
@@ -41,6 +42,14 @@ const verifyJWT = (req: any, res: any, next: any) => {
   });
 };
 
+// Admin middleware
+const verifyAdmin = (req: any, res: any, next: any) => {
+  if (!req.user || !req.user.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+};
+
 // Reports loader
 const loadReportsData = () => {
   try {
@@ -53,15 +62,28 @@ const loadReportsData = () => {
   }
 };
 
+// Save reports data
+const saveReportsData = (data: any) => {
+  try {
+    const reportsPath = path.join(__dirname, 'reports-data.json');
+    fs.writeFileSync(reportsPath, JSON.stringify(data, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error saving reports data:', error);
+    return false;
+  }
+};
+
 // In-memory user database
 const userDatabase = [
-  { email: 'name1@gmail.com', phone: '9991110001', department: 'IT', password: 'password123' },
-  { email: 'name2@gmail.com', phone: '9991110002', department: 'Sales', password: 'password123' },
-  { email: 'bhavya.khatri@gmail.com', phone: '9991110003', department: 'Finance', password: 'password123' },
-  { email: 'john.doe@company.com', phone: '9991110004', department: 'HR', password: 'password123' },
-  { email: 'sarah.wilson@company.com', phone: '9991110005', department: 'Marketing', password: 'password123' },
-  { email: 'mike.johnson@company.com', phone: '9991110006', department: 'Operations', password: 'password123' },
-  { email: 'Bhavya@samunnati.com', phone: '9991110007', department: 'Data and BI', password: 'Welcome@1234' }
+  { email: 'name1@gmail.com', phone: '9991110001', department: 'IT', password: 'password123', isAdmin: false },
+  { email: 'name2@gmail.com', phone: '9991110002', department: 'Sales', password: 'password123', isAdmin: false },
+  { email: 'bhavya.khatri@gmail.com', phone: '9991110003', department: 'Finance', password: 'password123', isAdmin: false },
+  { email: 'john.doe@company.com', phone: '9991110004', department: 'HR', password: 'password123', isAdmin: false },
+  { email: 'sarah.wilson@company.com', phone: '9991110005', department: 'Marketing', password: 'password123', isAdmin: false },
+  { email: 'mike.johnson@company.com', phone: '9991110006', department: 'Operations', password: 'password123', isAdmin: false },
+  { email: 'Bhavya@samunnati.com', phone: '9991110007', department: 'Data and BI', password: 'Welcome@1234', isAdmin: false },
+  { email: 'admin', phone: '', department: 'Admin', password: 'admin123', isAdmin: true }
 ];
 
 // 🟩 Protected endpoint
@@ -69,8 +91,9 @@ app.get('/api/reports/:department', verifyJWT, (req: any, res: any) => {
   try {
     const department = decodeURIComponent(req.params.department);
     const userDepartment = req.user.department;
+    const isAdmin = req.user.isAdmin;
 
-    if (department !== userDepartment) {
+    if (!isAdmin && department !== userDepartment) {
       return res.status(403).json({ error: 'Access denied: Cannot access other department reports' });
     }
 
@@ -82,6 +105,66 @@ app.get('/api/reports/:department', verifyJWT, (req: any, res: any) => {
   } catch (error) {
     console.error('Error fetching reports:', error);
     res.status(500).json({ error: 'Failed to fetch reports' });
+  }
+});
+
+// 🟩 Admin endpoint to get all reports data
+app.get('/api/admin/reports', verifyJWT, verifyAdmin, (req: any, res: any) => {
+  try {
+    const reportsData = loadReportsData();
+    res.json(reportsData);
+  } catch (error) {
+    console.error('Error fetching all reports:', error);
+    res.status(500).json({ error: 'Failed to fetch reports data' });
+  }
+});
+
+// 🟩 Admin endpoint to update reports data
+app.put('/api/admin/reports', verifyJWT, verifyAdmin, (req: any, res: any) => {
+  try {
+    const { reportsData } = req.body;
+    const success = saveReportsData(reportsData);
+    
+    if (success) {
+      res.json({ message: 'Reports data updated successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to save reports data' });
+    }
+  } catch (error) {
+    console.error('Error updating reports data:', error);
+    res.status(500).json({ error: 'Failed to update reports data' });
+  }
+});
+
+// 🟩 Admin endpoint to update specific report
+app.put('/api/admin/reports/:department/:reportId', verifyJWT, verifyAdmin, (req: any, res: any) => {
+  try {
+    const { department, reportId } = req.params;
+    const updatedReport = req.body;
+    
+    const reportsData = loadReportsData();
+    
+    if (!reportsData[department]) {
+      return res.status(404).json({ error: 'Department not found' });
+    }
+    
+    const reportIndex = reportsData[department].findIndex((r: any) => r.id === reportId);
+    if (reportIndex === -1) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+    
+    reportsData[department][reportIndex] = { ...reportsData[department][reportIndex], ...updatedReport };
+    
+    const success = saveReportsData(reportsData);
+    
+    if (success) {
+      res.json({ message: 'Report updated successfully', report: reportsData[department][reportIndex] });
+    } else {
+      res.status(500).json({ error: 'Failed to save report data' });
+    }
+  } catch (error) {
+    console.error('Error updating report:', error);
+    res.status(500).json({ error: 'Failed to update report' });
   }
 });
 
@@ -141,7 +224,7 @@ app.get('/auth/callback', async (req, res) => {
     const department = graphUser.department || departmentMap[email] || 'IT';
 
     const jwtToken = jwt.sign(
-      { email, department, name },
+      { email, department, name, isAdmin: false },
       JWT_SECRET!,
       { expiresIn: '2h' }
     );
@@ -174,7 +257,7 @@ app.post('/auth/manual-login', (req, res) => {
   }
 
   const token = jwt.sign(
-    { email: user.email, department: user.department },
+    { email: user.email, department: user.department, isAdmin: user.isAdmin || false },
     JWT_SECRET!,
     { expiresIn: '2h' }
   );
