@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Form, Alert, Spinner, Modal, Accordion } from 'react-bootstrap';
-import { Plus, Edit, Trash2, Save, ToggleLeft, ToggleRight, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, ToggleLeft, ToggleRight, Eye, Wand2 } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 import PowerBIViewer from './PowerBIViewer';
 
@@ -37,6 +37,8 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [editingDepartment, setEditingDepartment] = useState('');
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [generatedEmbed, setGeneratedEmbed] = useState<{embedToken: string, embedUrl: string} | null>(null);
 
   const [formData, setFormData] = useState({
     id: '',
@@ -50,6 +52,12 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
     embedToken: '',
     tenantId: '',
     isActive: true
+  });
+
+  const [powerBIGeneratorData, setPowerBIGeneratorData] = useState({
+    reportId: '',
+    datasetId: '',
+    coreDatasetId: ''
   });
 
   useEffect(() => {
@@ -78,6 +86,52 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
       setError((err as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generatePowerBIEmbed = async () => {
+    if (!powerBIGeneratorData.reportId || !powerBIGeneratorData.datasetId || !powerBIGeneratorData.coreDatasetId) {
+      setError('Please fill in all PowerBI fields');
+      return;
+    }
+
+    setGenerating(true);
+    setError('');
+    
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const response = await fetch(API_ENDPOINTS.adminGenerateEmbed, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reportId: powerBIGeneratorData.reportId,
+          datasetId: powerBIGeneratorData.datasetId,
+          coreDatasetId: powerBIGeneratorData.coreDatasetId
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PowerBI embed details');
+      }
+
+      const data = await response.json();
+      setGeneratedEmbed(data);
+      
+      // Auto-fill the form with generated data
+      setFormData(prev => ({
+        ...prev,
+        reportId: powerBIGeneratorData.reportId,
+        embedUrl: data.embedUrl,
+        embedToken: data.embedToken
+      }));
+
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -143,6 +197,12 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
       tenantId: report.tenantId || '',
       isActive: report.isActive !== false
     });
+    setPowerBIGeneratorData({
+      reportId: report.reportId || '',
+      datasetId: '',
+      coreDatasetId: ''
+    });
+    setGeneratedEmbed(null);
     setShowModal(true);
   };
 
@@ -162,6 +222,12 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
       tenantId: '',
       isActive: true
     });
+    setPowerBIGeneratorData({
+      reportId: '',
+      datasetId: '',
+      coreDatasetId: ''
+    });
+    setGeneratedEmbed(null);
     setShowModal(true);
   };
 
@@ -298,7 +364,7 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                           <strong>Icon:</strong> {report.icon}<br/>
                           <strong>PowerBI ID:</strong> {report.powerBIReportId}<br/>
                           <strong>Report ID:</strong> {report.reportId?.substring(0, 8) || 'Not set'}...<br/>
-                          <strong>Client ID:</strong> {report.clientId?.substring(0, 8) || 'Not set'}...
+                          <strong>Has Embed:</strong> {report.embedUrl ? 'Yes' : 'No'}
                         </p>
                         <div className="d-flex gap-2 flex-wrap">
                           <Button
@@ -411,52 +477,121 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                 </Form.Group>
               </Col>
             </Row>
-            <Form.Group className="mb-3">
-              <Form.Label>Client ID</Form.Label>
-              <Form.Control
-                type="text"
-                value={formData.clientId}
-                onChange={(e) => setFormData({...formData, clientId: e.target.value})}
-                placeholder="Azure AD Client ID"
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Report ID (PowerBI)</Form.Label>
-              <Form.Control
-                type="text"
-                value={formData.reportId}
-                onChange={(e) => setFormData({...formData, reportId: e.target.value})}
-                placeholder="PowerBI Report ID"
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Embed URL</Form.Label>
-              <Form.Control
-                type="url"
-                value={formData.embedUrl}
-                onChange={(e) => setFormData({...formData, embedUrl: e.target.value})}
-                placeholder="https://app.powerbi.com/reportEmbed?reportId=..."
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Embed Token</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                value={formData.embedToken}
-                onChange={(e) => setFormData({...formData, embedToken: e.target.value})}
-                placeholder="PowerBI Embed Token"
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Tenant ID</Form.Label>
-              <Form.Control
-                type="text"
-                value={formData.tenantId}
-                onChange={(e) => setFormData({...formData, tenantId: e.target.value})}
-                placeholder="Azure AD Tenant ID"
-              />
-            </Form.Group>
+
+            {/* PowerBI Generator Section */}
+            <Card className="mb-3">
+              <Card.Header className="d-flex align-items-center">
+                <Wand2 size={16} className="me-2" />
+                <strong>PowerBI Embed Generator</strong>
+              </Card.Header>
+              <Card.Body>
+                <p className="text-muted small mb-3">
+                  Generate embed token and URL automatically using PowerBI API
+                </p>
+                <Row>
+                  <Col md={4}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Report ID</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={powerBIGeneratorData.reportId}
+                        onChange={(e) => setPowerBIGeneratorData({...powerBIGeneratorData, reportId: e.target.value})}
+                        placeholder="PowerBI Report ID"
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Dataset ID</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={powerBIGeneratorData.datasetId}
+                        onChange={(e) => setPowerBIGeneratorData({...powerBIGeneratorData, datasetId: e.target.value})}
+                        placeholder="Primary Dataset ID"
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Core Dataset ID</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={powerBIGeneratorData.coreDatasetId}
+                        onChange={(e) => setPowerBIGeneratorData({...powerBIGeneratorData, coreDatasetId: e.target.value})}
+                        placeholder="Core/Shared Dataset ID"
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <div className="d-flex gap-2 mb-3">
+                  <Button
+                    variant="success"
+                    onClick={generatePowerBIEmbed}
+                    disabled={generating}
+                    className="d-flex align-items-center"
+                  >
+                    <Wand2 size={16} className="me-1" />
+                    {generating ? 'Generating...' : 'Generate Embed Details'}
+                  </Button>
+                </div>
+
+                {generatedEmbed && (
+                  <div>
+                    <Alert variant="success">
+                      <strong>✅ Embed details generated successfully!</strong>
+                    </Alert>
+                    <Form.Group className="mb-2">
+                      <Form.Label>Generated Embed URL</Form.Label>
+                      <Form.Control
+                        as="textarea"
+                        rows={2}
+                        value={generatedEmbed.embedUrl}
+                        readOnly
+                        className="bg-light"
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-2">
+                      <Form.Label>Generated Embed Token</Form.Label>
+                      <Form.Control
+                        as="textarea"
+                        rows={3}
+                        value={generatedEmbed.embedToken}
+                        readOnly
+                        className="bg-light"
+                      />
+                    </Form.Group>
+                  </div>
+                )}
+              </Card.Body>
+            </Card>
+
+            {/* Manual Override Section */}
+            <Card>
+              <Card.Header>
+                <strong>Manual Override (Optional)</strong>
+              </Card.Header>
+              <Card.Body>
+                <Form.Group className="mb-3">
+                  <Form.Label>Embed URL</Form.Label>
+                  <Form.Control
+                    type="url"
+                    value={formData.embedUrl}
+                    onChange={(e) => setFormData({...formData, embedUrl: e.target.value})}
+                    placeholder="https://app.powerbi.com/reportEmbed?reportId=..."
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>Embed Token</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    value={formData.embedToken}
+                    onChange={(e) => setFormData({...formData, embedToken: e.target.value})}
+                    placeholder="PowerBI Embed Token"
+                  />
+                </Form.Group>
+              </Card.Body>
+            </Card>
           </Form>
         </Modal.Body>
         <Modal.Footer>

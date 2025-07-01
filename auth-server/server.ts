@@ -170,12 +170,24 @@ app.get('/api/reports/:department', verifyJWT, (req: AuthenticatedRequest, res: 
   const reports = loadReportsData();
   const departmentReports = reports[department] || [];
 
-  // Filter active reports and include embed details
+  // Filter active reports and include embed details for ALL users (not just admins)
   const filteredReports = departmentReports
     .filter(report => report.isActive !== false)
     .map(report => {
-      const { id, title, description, icon, powerBIReportId, isActive, embedUrl, embedToken } = report;
-      return { id, title, description, icon, powerBIReportId, isActive, embedUrl, embedToken };
+      const { id, title, description, icon, powerBIReportId, isActive, embedUrl, embedToken, reportId, clientId, tenantId } = report;
+      return { 
+        id, 
+        title, 
+        description, 
+        icon, 
+        powerBIReportId, 
+        isActive, 
+        embedUrl, 
+        embedToken, 
+        reportId, 
+        clientId, 
+        tenantId 
+      };
     });
 
   return res.json({ reports: filteredReports });

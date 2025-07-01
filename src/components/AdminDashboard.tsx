@@ -1,11 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Navbar, Nav, Button, Spinner, Alert, Tabs, Tab } from 'react-bootstrap';
-import { LogOut, Shield, FileText, Users, Activity, Building, Eye, Wand2 } from 'lucide-react';
+import { LogOut, Shield, FileText, Users, Activity, Building, Eye } from 'lucide-react';
 import AdminReportsEditor from './AdminReportsEditor';
 import AdminDepartmentManager from './AdminDepartmentManager';
 import AdminReportsViewer from './AdminReportsViewer';
-import AdminPowerBIGenerator from './AdminPowerBIGenerator';
 import { API_ENDPOINTS } from '../config/api';
 
 interface User {
@@ -133,9 +132,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 </Tab>
                 <Tab eventKey="departments" title={<span><Building size={16} className="me-1" />Departments</span>}>
                   <AdminDepartmentManager onDepartmentChange={fetchAdminStats} />
-                </Tab>
-                <Tab eventKey="generator" title={<span><Wand2 size={16} className="me-1" />PowerBI Generator</span>}>
-                  <AdminPowerBIGenerator />
                 </Tab>
                 <Tab eventKey="viewer" title={<span><Eye size={16} className="me-1" />View Reports</span>}>
                   <AdminReportsViewer />
