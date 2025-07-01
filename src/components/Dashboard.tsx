@@ -1,14 +1,10 @@
 
 import React, { useState } from 'react';
-import { Container, Row, Col, Card, Navbar, Nav, Button, Spinner, Alert } from 'react-bootstrap';
-import { 
-  LogOut,
-  Menu as MenuIcon,
-  FileText,
-} from 'lucide-react';
+import { Container, Row, Col, Card, Navbar, Button, Spinner, Alert } from 'react-bootstrap';
+import { LogOut, FileText } from 'lucide-react';
 import PowerBIViewer from './PowerBIViewer';
 import ReportIcon from './ReportIcon';
-import { useReports } from '../hooks/useReports';
+import { useReports, useReportDetails } from '../hooks/useReports';
 
 interface User {
   email: string;
@@ -26,25 +22,27 @@ interface MenuOption {
   description: string;
   icon: string;
   powerBIReportId: string;
+  embedUrl?: string;
+  embedToken?: string;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
-  const [selectedMenu, setSelectedMenu] = useState<MenuOption | null>(null);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [selectedMenuId, setSelectedMenuId] = useState<string | null>(null);
 
-  const { data: reports = [], isLoading, error } = useReports(user.department);
+  const { data: reports = [], isLoading: isLoadingReports, error: reportsError } = useReports(user.department);
+  const { data: selectedReport, isLoading: isLoadingDetails, error: detailsError } = useReportDetails(user.department, selectedMenuId);
 
-  // Filter active reports for regular users
   const activeReports = reports.filter(report => report.isActive !== false);
 
-  const handleMenuClick = (menu: MenuOption) => {
-    setSelectedMenu(menu);
-    setShowMobileMenu(false);
+  const handleMenuClick = (menuId: string) => {
+    setSelectedMenuId(menuId);
   };
 
   const handleBackToMenu = () => {
-    setSelectedMenu(null);
+    setSelectedMenuId(null);
   };
+
+  const selectedMenu = reports.find(r => r.id === selectedMenuId);
 
   return (
     <div className="app-container">
@@ -72,7 +70,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       </Navbar>
 
       <Container fluid className="p-4">
-        {!selectedMenu ? (
+        {!selectedMenuId ? (
           <>
             <Row className="mb-4">
               <Col>
@@ -85,7 +83,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               </Col>
             </Row>
 
-            {/* Summary Cards */}
             <Row className="mb-4">
               <Col md={4}>
                 <Card className="text-center p-3 bg-primary text-white">
@@ -98,19 +95,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               </Col>
             </Row>
 
-            {isLoading ? (
+            {isLoadingReports ? (
               <Row>
                 <Col className="text-center">
                   <Spinner animation="border" variant="primary" />
                   <p className="mt-2 text-muted">Loading reports...</p>
                 </Col>
               </Row>
-            ) : error ? (
+            ) : reportsError ? (
               <Row>
                 <Col>
                   <Alert variant="danger">
                     <h6>Error Loading Reports</h6>
-                    Failed to load reports for {user.department} department. Please try again.
+                    <p>{reportsError.message}</p>
                   </Alert>
                 </Col>
               </Row>
@@ -120,7 +117,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                   <Col key={menu.id} xs={12} sm={6} lg={4}>
                     <Card 
                       className="menu-card h-100 p-3"
-                      onClick={() => handleMenuClick(menu)}
+                      onClick={() => handleMenuClick(menu.id)}
                     >
                       <Card.Body className="text-center">
                         <ReportIcon iconName={menu.icon} />
@@ -136,10 +133,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             )}
           </>
         ) : (
-          <PowerBIViewer 
-            menu={selectedMenu} 
-            onBack={handleBackToMenu}
-          />
+          <>
+            {isLoadingDetails && <Spinner animation="border" variant="primary" />}
+            {detailsError && <Alert variant="danger"><h6>Error Loading Report Details</h6><p>{detailsError.message}</p></Alert>}
+            {selectedReport && selectedMenu && (
+              <PowerBIViewer 
+                menu={{...selectedMenu, ...selectedReport}}
+                onBack={handleBackToMenu}
+              />
+            )}
+          </>
         )}
       </Container>
     </div>

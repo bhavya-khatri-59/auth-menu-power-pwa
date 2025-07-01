@@ -4,6 +4,8 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localho
 
 export const API_ENDPOINTS = {
   reports: (department: string) => `${API_BASE_URL}/api/reports/${encodeURIComponent(department)}`,
+  reportDetails: (department: string, reportId: string) => 
+    `${API_BASE_URL}/api/reports/${encodeURIComponent(department)}/${encodeURIComponent(reportId)}`,
   loginUrl: `${API_BASE_URL}/auth/login-url`,
   manualLogin: `${API_BASE_URL}/auth/manual-login`,
   adminReports: `${API_BASE_URL}/api/admin/reports`,
