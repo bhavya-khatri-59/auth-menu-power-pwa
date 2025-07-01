@@ -12,4 +12,6 @@ export const API_ENDPOINTS = {
   adminDepartments: `${BASE_URL}/api/admin/departments`,
   adminDeleteDepartment: (departmentName: string) => `${BASE_URL}/api/admin/departments/${encodeURIComponent(departmentName)}`,
   adminGenerateEmbed: `${BASE_URL}/api/admin/generate-embed`,
+  manualLogin: `${BASE_URL}/auth/manual-login`,
+  loginUrl: `${BASE_URL}/auth/login-url`,
 };
