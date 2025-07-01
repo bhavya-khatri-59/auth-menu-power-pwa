@@ -11,9 +11,9 @@ interface Report {
   description: string;
   icon: string;
   powerBIReportId: string;
-  clientId: string;
-  reportId: string;
-  embedId: string;
+  clientId?: string;
+  reportId?: string;
+  embedId?: string;
   isActive: boolean;
   department: string;
 }
@@ -45,8 +45,17 @@ const AdminReportsViewer: React.FC = () => {
       }
 
       const data = await response.json();
-      setReports(data.reports);
+      console.log('Fetched reports data:', data);
+      
+      // Handle the response structure properly
+      if (data.reports && Array.isArray(data.reports)) {
+        setReports(data.reports);
+      } else {
+        console.error('Invalid reports data structure:', data);
+        setError('Invalid reports data structure received');
+      }
     } catch (err) {
+      console.error('Error fetching reports:', err);
       setError((err as Error).message);
     } finally {
       setLoading(false);

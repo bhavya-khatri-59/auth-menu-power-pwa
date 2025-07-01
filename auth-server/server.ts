@@ -103,6 +103,7 @@ app.get('/api/admin/all-reports', verifyJWT, verifyAdmin, (_req, res) => {
   const allReports = Object.entries(reportsData).flatMap(([dept, reports]) =>
     reports.map(r => ({ ...r, department: dept }))
   );
+  console.log('Sending all reports:', { reports: allReports });
   return res.json({ reports: allReports });
 });
 
