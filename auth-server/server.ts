@@ -83,22 +83,163 @@ const verifyAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunctio
   next();
 };
 
-// 📊 GET department reports
+// Generate PowerBI embed token and URL
+const generatePowerBIEmbed = async (reportId: string, datasetId: string, coreDatasetId: string) => {
+  const { POWERBI_CLIENT_ID, POWERBI_CLIENT_SECRET, POWERBI_TENANT_ID, POWERBI_GROUP_ID } = process.env;
+  
+  if (!POWERBI_CLIENT_ID || !POWERBI_CLIENT_SECRET || !POWERBI_TENANT_ID || !POWERBI_GROUP_ID) {
+    throw new Error('Missing PowerBI environment variables');
+  }
+
+  const authority = `https://login.microsoftonline.com/${POWERBI_TENANT_ID}`;
+  const scope = 'https://analysis.windows.net/powerbi/api/.default';
+  
+  // Get access token
+  const tokenUrl = `${authority}/oauth2/v2.0/token`;
+  const tokenParams = new URLSearchParams({
+    client_id: POWERBI_CLIENT_ID,
+    client_secret: POWERBI_CLIENT_SECRET,
+    scope: scope,
+    grant_type: 'client_credentials'
+  });
+
+  const tokenResponse = await fetch(tokenUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: tokenParams
+  });
+
+  if (!tokenResponse.ok) {
+    throw new Error(`Token request failed: ${tokenResponse.statusText}`);
+  }
+
+  const tokenData = await tokenResponse.json();
+  const accessToken = tokenData.access_token;
+
+  // Generate embed token
+  const embedTokenPayload = {
+    datasets: [
+      { id: datasetId, xmlaPermissions: "ReadOnly" },
+      { id: coreDatasetId, xmlaPermissions: "ReadOnly" }
+    ],
+    reports: [{ id: reportId }],
+    targetWorkspaces: [{ id: POWERBI_GROUP_ID }]
+  };
+
+  const embedTokenResponse = await fetch('https://api.powerbi.com/v1.0/myorg/GenerateToken', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(embedTokenPayload)
+  });
+
+  if (!embedTokenResponse.ok) {
+    throw new Error(`Embed token generation failed: ${embedTokenResponse.statusText}`);
+  }
+
+  const embedTokenData = await embedTokenResponse.json();
+  const embedToken = embedTokenData.token;
+
+  // Get embed URL
+  const reportResponse = await fetch(`https://api.powerbi.com/v1.0/myorg/groups/${POWERBI_GROUP_ID}/reports/${reportId}`, {
+    headers: { 'Authorization': `Bearer ${accessToken}` }
+  });
+
+  if (!reportResponse.ok) {
+    throw new Error(`Report details fetch failed: ${reportResponse.statusText}`);
+  }
+
+  const reportData = await reportResponse.json();
+  const embedUrl = reportData.embedUrl;
+
+  return { embedToken, embedUrl };
+};
+
+// 📊 GET department reports - Fixed to work for non-admins
 app.get('/api/reports/:department', verifyJWT, (req: AuthenticatedRequest, res: Response) => {
   const department = decodeURIComponent(req.params.department);
   const { department: userDept, isAdmin } = req.user!;
-  if (!isAdmin && department !== userDept) return res.status(403).json({ error: 'Access denied' });
+  
+  // Allow admins to access any department, non-admins only their own
+  if (!isAdmin && department !== userDept) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
 
   const reports = loadReportsData();
   const departmentReports = reports[department] || [];
 
-  // For non-admins, ensure only active reports are returned and include embed details
-  const filteredReports = departmentReports.map(report => {
-    const { id, title, description, icon, powerBIReportId, isActive, embedUrl, embedToken } = report;
-    return { id, title, description, icon, powerBIReportId, isActive, embedUrl, embedToken };
-  }).filter(report => report.isActive !== false); // Filter out inactive reports for all users
+  // Filter active reports and include embed details
+  const filteredReports = departmentReports
+    .filter(report => report.isActive !== false)
+    .map(report => {
+      const { id, title, description, icon, powerBIReportId, isActive, embedUrl, embedToken } = report;
+      return { id, title, description, icon, powerBIReportId, isActive, embedUrl, embedToken };
+    });
 
   return res.json({ reports: filteredReports });
+});
+
+// 🔐 ADMIN - get all departments
+app.get('/api/admin/departments', verifyJWT, verifyAdmin, (_req, res) => {
+  const reportsData = loadReportsData();
+  const departments = Object.keys(reportsData);
+  return res.json({ departments });
+});
+
+// 🔐 ADMIN - add department
+app.post('/api/admin/departments', verifyJWT, verifyAdmin, (req, res) => {
+  const { departmentName } = req.body;
+  if (!departmentName || typeof departmentName !== 'string') {
+    return res.status(400).json({ error: 'Department name is required' });
+  }
+
+  const reportsData = loadReportsData();
+  if (reportsData[departmentName]) {
+    return res.status(400).json({ error: 'Department already exists' });
+  }
+
+  reportsData[departmentName] = [];
+  const success = saveReportsData(reportsData);
+  
+  return success 
+    ? res.json({ message: 'Department added successfully' })
+    : res.status(500).json({ error: 'Failed to save department' });
+});
+
+// 🔐 ADMIN - delete department
+app.delete('/api/admin/departments/:departmentName', verifyJWT, verifyAdmin, (req, res) => {
+  const { departmentName } = req.params;
+  const reportsData = loadReportsData();
+  
+  if (!reportsData[departmentName]) {
+    return res.status(404).json({ error: 'Department not found' });
+  }
+
+  delete reportsData[departmentName];
+  const success = saveReportsData(reportsData);
+  
+  return success 
+    ? res.json({ message: 'Department deleted successfully' })
+    : res.status(500).json({ error: 'Failed to delete department' });
+});
+
+// 🔐 ADMIN - generate PowerBI embed details
+app.post('/api/admin/generate-embed', verifyJWT, verifyAdmin, async (req, res) => {
+  const { reportId, datasetId, coreDatasetId } = req.body;
+  
+  if (!reportId || !datasetId || !coreDatasetId) {
+    return res.status(400).json({ error: 'Report ID, dataset ID, and core dataset ID are required' });
+  }
+
+  try {
+    const { embedToken, embedUrl } = await generatePowerBIEmbed(reportId, datasetId, coreDatasetId);
+    return res.json({ embedToken, embedUrl });
+  } catch (error) {
+    console.error('PowerBI embed generation error:', error);
+    return res.status(500).json({ error: 'Failed to generate embed details' });
+  }
 });
 
 // 🔐 ADMIN - get all
