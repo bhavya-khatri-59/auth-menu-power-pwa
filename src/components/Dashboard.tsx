@@ -29,10 +29,12 @@ interface MenuOption {
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [selectedMenuId, setSelectedMenuId] = useState<string | null>(null);
 
-  const { data: reports = [], isLoading: isLoadingReports, error: reportsError } = useReports(user.department);
+  const { data: reports, isLoading: isLoadingReports, error: reportsError } = useReports(user.department);
   const { data: selectedReport, isLoading: isLoadingDetails, error: detailsError } = useReportDetails(user.department, selectedMenuId);
 
-  const activeReports = reports.filter(report => report.isActive !== false);
+  // Ensure reports is an array and filter active reports
+  const reportsArray = Array.isArray(reports) ? reports : [];
+  const activeReports = reportsArray.filter(report => report.isActive !== false);
 
   const handleMenuClick = (menuId: string) => {
     setSelectedMenuId(menuId);
@@ -42,7 +44,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setSelectedMenuId(null);
   };
 
-  const selectedMenu = reports.find(r => r.id === selectedMenuId);
+  // Find selected menu from the reports array
+  const selectedMenu = reportsArray.find(r => r.id === selectedMenuId);
 
   return (
     <div className="app-container">

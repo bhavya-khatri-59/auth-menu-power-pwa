@@ -1,5 +1,6 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { API_ENDPOINTS } from '../config/api';
 import { getAuthToken } from '../lib/auth';
 
@@ -52,19 +53,25 @@ const fetchReportDetails = async (department: string, reportId: string): Promise
 export const useReports = (department: string) => {
   const queryClient = useQueryClient();
 
-  return useQuery<Report[], Error>({
+  const query = useQuery<Report[], Error>({
     queryKey: ['reports', department],
     queryFn: () => fetchReports(department),
     enabled: !!department,
-    onSuccess: (data) => {
-      data.forEach(report => {
+  });
+
+  // Use useEffect instead of deprecated onSuccess
+  useEffect(() => {
+    if (query.data) {
+      query.data.forEach(report => {
         queryClient.prefetchQuery({
           queryKey: ['reportDetails', department, report.id],
           queryFn: () => fetchReportDetails(department, report.id),
         });
       });
-    },
-  });
+    }
+  }, [query.data, queryClient, department]);
+
+  return query;
 };
 
 export const useReportDetails = (department: string, reportId: string | null) => {
