@@ -13,7 +13,9 @@ interface Report {
   powerBIReportId: string;
   clientId?: string;
   reportId?: string;
-  embedId?: string;
+  embedUrl?: string;
+  embedToken?: string;
+  tenantId?: string;
   isActive: boolean;
   department: string;
 }
@@ -47,7 +49,7 @@ const AdminReportsViewer: React.FC = () => {
       const data = await response.json();
       console.log('Fetched reports data:', data);
       
-      // Handle the response structure properly
+      // Handle the response structure properly - data.reports should be the flattened array
       if (data.reports && Array.isArray(data.reports)) {
         setReports(data.reports);
       } else {
@@ -70,7 +72,12 @@ const AdminReportsViewer: React.FC = () => {
           title: selectedReport.title,
           description: selectedReport.description,
           icon: <span>{selectedReport.icon}</span>,
-          powerBIReportId: selectedReport.powerBIReportId
+          powerBIReportId: selectedReport.powerBIReportId,
+          reportId: selectedReport.reportId,
+          embedUrl: selectedReport.embedUrl,
+          embedToken: selectedReport.embedToken,
+          tenantId: selectedReport.tenantId,
+          clientId: selectedReport.clientId
         }}
         onBack={() => setSelectedReport(null)}
       />
@@ -128,6 +135,7 @@ const AdminReportsViewer: React.FC = () => {
                 <p className="text-muted small mb-2">{report.description}</p>
                 <p className="text-muted small mb-3">
                   <strong>PowerBI ID:</strong> {report.powerBIReportId}<br/>
+                  <strong>Report ID:</strong> {report.reportId?.substring(0, 8) || 'Not set'}...<br/>
                   <strong>Client ID:</strong> {report.clientId?.substring(0, 8) || 'Not set'}...
                 </p>
                 <Button

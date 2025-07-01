@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Form, Alert, Spinner, Modal, Accordion } from 'react-bootstrap';
 import { Plus, Edit, Trash2, Save, ToggleLeft, ToggleRight, Eye } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
+import PowerBIViewer from './PowerBIViewer';
 
 interface Report {
   id: string;
@@ -11,7 +13,9 @@ interface Report {
   powerBIReportId: string;
   clientId: string;
   reportId: string;
-  embedId: string;
+  embedUrl: string;
+  embedToken: string;
+  tenantId: string;
   isActive: boolean;
 }
 
@@ -32,6 +36,7 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
   const [showModal, setShowModal] = useState(false);
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [editingDepartment, setEditingDepartment] = useState('');
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
   const [formData, setFormData] = useState({
     id: '',
@@ -41,7 +46,9 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
     powerBIReportId: '',
     clientId: '',
     reportId: '',
-    embedId: '',
+    embedUrl: '',
+    embedToken: '',
+    tenantId: '',
     isActive: true
   });
 
@@ -117,18 +124,7 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
   };
 
   const handleViewReport = (report: Report) => {
-    // Create a menu object for PowerBIViewer
-    const menu = {
-      id: report.id,
-      title: report.title,
-      description: report.description,
-      icon: <span>{report.icon}</span>,
-      powerBIReportId: report.powerBIReportId
-    };
-    
-    // You could either open in a new tab or use a modal
-    // For now, let's just show an alert with the report info
-    alert(`Viewing report: ${report.title}\nPowerBI ID: ${report.powerBIReportId}`);
+    setSelectedReport(report);
   };
 
   const handleEditReport = (department: string, report: Report) => {
@@ -142,7 +138,9 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
       powerBIReportId: report.powerBIReportId,
       clientId: report.clientId || '',
       reportId: report.reportId || '',
-      embedId: report.embedId || '',
+      embedUrl: report.embedUrl || '',
+      embedToken: report.embedToken || '',
+      tenantId: report.tenantId || '',
       isActive: report.isActive !== false
     });
     setShowModal(true);
@@ -159,7 +157,9 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
       powerBIReportId: '',
       clientId: '',
       reportId: '',
-      embedId: '',
+      embedUrl: '',
+      embedToken: '',
+      tenantId: '',
       isActive: true
     });
     setShowModal(true);
@@ -193,6 +193,26 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
     updatedReportsData[department] = updatedReportsData[department].filter(r => r.id !== reportId);
     setReportsData(updatedReportsData);
   };
+
+  if (selectedReport) {
+    return (
+      <PowerBIViewer
+        menu={{
+          id: selectedReport.id,
+          title: selectedReport.title,
+          description: selectedReport.description,
+          icon: <span>{selectedReport.icon}</span>,
+          powerBIReportId: selectedReport.powerBIReportId,
+          reportId: selectedReport.reportId,
+          embedUrl: selectedReport.embedUrl,
+          embedToken: selectedReport.embedToken,
+          tenantId: selectedReport.tenantId,
+          clientId: selectedReport.clientId
+        }}
+        onBack={() => setSelectedReport(null)}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -277,6 +297,7 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                           <strong>Status:</strong> {report.isActive !== false ? 'Active' : 'Inactive'}<br/>
                           <strong>Icon:</strong> {report.icon}<br/>
                           <strong>PowerBI ID:</strong> {report.powerBIReportId}<br/>
+                          <strong>Report ID:</strong> {report.reportId?.substring(0, 8) || 'Not set'}...<br/>
                           <strong>Client ID:</strong> {report.clientId?.substring(0, 8) || 'Not set'}...
                         </p>
                         <div className="d-flex gap-2 flex-wrap">
@@ -400,7 +421,7 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Report ID</Form.Label>
+              <Form.Label>Report ID (PowerBI)</Form.Label>
               <Form.Control
                 type="text"
                 value={formData.reportId}
@@ -412,9 +433,28 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
               <Form.Label>Embed URL</Form.Label>
               <Form.Control
                 type="url"
-                value={formData.embedId}
-                onChange={(e) => setFormData({...formData, embedId: e.target.value})}
+                value={formData.embedUrl}
+                onChange={(e) => setFormData({...formData, embedUrl: e.target.value})}
                 placeholder="https://app.powerbi.com/reportEmbed?reportId=..."
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Embed Token</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                value={formData.embedToken}
+                onChange={(e) => setFormData({...formData, embedToken: e.target.value})}
+                placeholder="PowerBI Embed Token"
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Tenant ID</Form.Label>
+              <Form.Control
+                type="text"
+                value={formData.tenantId}
+                onChange={(e) => setFormData({...formData, tenantId: e.target.value})}
+                placeholder="Azure AD Tenant ID"
               />
             </Form.Group>
           </Form>
