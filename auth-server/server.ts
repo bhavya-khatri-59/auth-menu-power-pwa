@@ -90,7 +90,15 @@ app.get('/api/reports/:department', verifyJWT, (req: AuthenticatedRequest, res: 
   if (!isAdmin && department !== userDept) return res.status(403).json({ error: 'Access denied' });
 
   const reports = loadReportsData();
-  return res.json({ reports: reports[department] || [] });
+  const departmentReports = reports[department] || [];
+
+  // For non-admins, ensure only active reports are returned and include embed details
+  const filteredReports = departmentReports.map(report => {
+    const { id, title, description, icon, powerBIReportId, isActive, embedUrl, embedToken } = report;
+    return { id, title, description, icon, powerBIReportId, isActive, embedUrl, embedToken };
+  }).filter(report => report.isActive !== false); // Filter out inactive reports for all users
+
+  return res.json({ reports: filteredReports });
 });
 
 // 🔐 ADMIN - get all
