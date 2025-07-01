@@ -1,11 +1,17 @@
 
-import { useEffect, useRef, useState } from 'react';
-import { models, Report, service, factories } from 'powerbi-client';
+import { useEffect, useRef } from 'react';
+import {
+  models,
+  service,
+  factories,
+  Report
+} from 'powerbi-client';
 
 interface PowerBIEmbedProps {
-  reportId?: string;
-  embedUrl?: string;
-  embedToken?: string;
+  embedToken: string;
+  embedUrl: string;
+  reportId: string;
+  tokenType?: '0' | '1'; // 0 for AAD, 1 for Embed
   className?: string;
 }
 
@@ -16,96 +22,104 @@ const powerbiService = new service.Service(
 );
 
 const PowerBIEmbed = ({
-  reportId,
-  embedUrl,
   embedToken,
-  className = '',
+  embedUrl,
+  reportId,
+  tokenType = '1',
+  className = ''
 }: PowerBIEmbedProps) => {
-  const reportContainer = useRef<HTMLDivElement>(null);
+  const embedContainerRef = useRef<HTMLDivElement>(null);
   const reportRef = useRef<Report | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!reportContainer.current || !reportId || !embedUrl || !embedToken) {
-      if (!embedToken) setError('Embed token is not provided.');
+    if (!embedToken || !embedUrl || !reportId || !embedContainerRef.current) {
+      console.log('Missing required props:', { embedToken: !!embedToken, embedUrl: !!embedUrl, reportId: !!reportId });
       return;
     }
 
-    const embedConfig = {
+    console.log('Embedding PowerBI with:', { reportId, embedUrl: embedUrl.substring(0, 50) + '...', tokenType });
+
+    const config = {
       type: 'report',
-      id: reportId,
-      embedUrl,
+      tokenType: tokenType === '0' ? models.TokenType.Aad : models.TokenType.Embed,
       accessToken: embedToken,
-      tokenType: models.TokenType.Embed,
+      embedUrl: embedUrl,
+      id: reportId,
+      permissions: models.Permissions.All,
       settings: {
         panes: {
-          filters: { expanded: false, visible: true },
-          pageNavigation: { visible: true },
+          filters: { visible: true },
+          pageNavigation: { visible: true }
         },
-        background: models.BackgroundType.Transparent,
-      },
-    };
-
-    try {
-      powerbiService.reset(reportContainer.current);
-      reportRef.current = powerbiService.embed(
-        reportContainer.current,
-        embedConfig
-      ) as Report;
-
-      reportRef.current.on('loaded', () => {
-        console.log('✅ Power BI report loaded');
-      });
-
-      reportRef.current.on('error', (event) => {
-        const errorDetail = event.detail;
-        console.error('❌ Power BI embed error:', errorDetail);
-        setError(`Error embedding report: ${JSON.stringify(errorDetail, null, 2)}`);
-      });
-    } catch (err) {
-      console.error('❌ Power BI embed exception:', err);
-      setError(`Exception caught while embedding: ${err}`);
-    }
-
-    return () => {
-      if (reportRef.current) {
-        try {
-          reportRef.current.off('loaded');
-          reportRef.current.off('error');
-        } catch (e) {
-          console.warn('⚠️ Cleanup failed:', e);
+        bars: {
+          statusBar: { visible: true }
         }
       }
     };
-  }, [reportId, embedUrl, embedToken]);
 
-  if (error) {
-    return (
-      <div className={`text-center p-4 ${className}`}>
-        <p className="text-red-700 font-bold">⚠️ Error Embedding Report</p>
-        <p className="text-sm mb-2">{error}</p>
-        <div className="mt-3 text-xs text-left bg-gray-100 p-2 rounded">
-          <p><strong>Report ID:</strong> {reportId || 'Not provided'}</p>
-          <p><strong>Embed URL:</strong> {embedUrl || 'Not provided'}</p>
-        </div>
-      </div>
-    );
-  }
+    powerbiService.reset(embedContainerRef.current); // clear old embeds
 
-  if (!embedToken) {
+    const report = powerbiService.embed(embedContainerRef.current, config) as Report;
+    reportRef.current = report;
+
+    const reportLoaded = new Promise<void>((resolve) => {
+      report.off('loaded');
+      report.on('loaded', () => {
+        console.log('✅ Report Loaded');
+        resolve();
+      });
+    });
+
+    const reportRendered = new Promise<void>((resolve) => {
+      report.off('rendered');
+      report.on('rendered', () => {
+        console.log('✅ Report Rendered');
+        resolve();
+      });
+    });
+
+    report.off('error');
+    report.on('error', (event) => {
+      console.error('❌ Embed error:', event.detail);
+    });
+
+    // Handle async loading
+    (async () => {
+      try {
+        await reportLoaded;
+        console.log('✅ Report loaded successfully');
+        await reportRendered;
+        console.log('✅ Report rendered successfully');
+      } catch (error) {
+        console.error('❌ Error during report loading/rendering:', error);
+      }
+    })();
+
+    return () => {
+      if (reportRef.current) {
+        reportRef.current.off('loaded');
+        reportRef.current.off('rendered');
+        reportRef.current.off('error');
+      }
+    };
+  }, [embedToken, embedUrl, reportId, tokenType]);
+
+  if (!embedToken || !embedUrl || !reportId) {
     return (
-      <div className={`text-center p-4 ${className}`}>
-        <p className="text-yellow-700 font-bold">⚠️ Authentication Required</p>
-        <p className="text-sm">Embed token not provided.</p>
+      <div className={`text-center p-4 ${className}`} style={{ width: '100%', height: '600px' }}>
+        <p className="text-yellow-700 font-bold">⚠️ Missing PowerBI Configuration</p>
+        <p className="text-sm">
+          Missing: {!embedToken && 'Embed Token'} {!embedUrl && 'Embed URL'} {!reportId && 'Report ID'}
+        </p>
       </div>
     );
   }
 
   return (
     <div
-      ref={reportContainer}
-      className={`w-full h-full ${className}`}
-      style={{ minHeight: '400px' }}
+      ref={embedContainerRef}
+      className={className}
+      style={{ width: '100%', height: '600px' }}
     />
   );
 };

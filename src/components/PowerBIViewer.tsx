@@ -1,3 +1,4 @@
+
 import PowerBIEmbed from './powerbi/PowerBIEmbed';
 
 // PowerBI Viewer component that wraps the embed
@@ -38,9 +39,10 @@ const PowerBIViewer = ({ menu, onBack }: PowerBIViewerProps) => {
       <div className="card">
         <div className="card-body p-0" style={{ height: '600px' }}>
           <PowerBIEmbed
-            reportId={menu.powerBIReportId}
-            embedUrl={menu.embedUrl}
-            embedToken={menu.embedToken}
+            reportId={menu.reportId || menu.powerBIReportId}
+            embedUrl={menu.embedUrl || ''}
+            embedToken={menu.embedToken || ''}
+            tokenType="1"
             className="h-100"
           />
         </div>
