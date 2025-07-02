@@ -13,6 +13,8 @@ interface Report {
   powerBIReportId: string;
   clientId: string;
   reportId: string;
+  datasetId?: string;
+  coreDatasetId?: string;
   embedUrl: string;
   embedToken: string;
   tenantId: string;
@@ -25,6 +27,25 @@ interface ReportsData {
 
 interface AdminReportsEditorProps {
   onStatsUpdate?: () => void;
+}
+
+// Helper function to fetch embed details
+async function fetchEmbedDetails(reportId: string, datasetId: string, coreDatasetId: string, token: string) {
+  const res = await fetch(API_ENDPOINTS.adminGenerateEmbed, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ reportId, datasetId, coreDatasetId })
+  });
+
+  if (!res.ok) {
+    console.error(await res.text());
+    throw new Error('Failed to generate embed token');
+  }
+
+  return await res.json(); // { embedToken, embedUrl }
 }
 
 const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }) => {
@@ -48,6 +69,8 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
     powerBIReportId: '',
     clientId: '',
     reportId: '',
+    datasetId: '',
+    coreDatasetId: '',
     embedUrl: '',
     embedToken: '',
     tenantId: '',
@@ -90,8 +113,8 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
   };
 
   const generatePowerBIEmbed = async () => {
-    if (!powerBIGeneratorData.reportId || !powerBIGeneratorData.datasetId || !powerBIGeneratorData.coreDatasetId) {
-      setError('Please fill in all PowerBI fields');
+    if (!formData.reportId || !formData.datasetId || !formData.coreDatasetId) {
+      setError('Please fill in Report ID, Dataset ID, and Core Dataset ID');
       return;
     }
 
@@ -100,30 +123,18 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
     
     try {
       const token = localStorage.getItem('jwt_token');
-      const response = await fetch(API_ENDPOINTS.adminGenerateEmbed, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          reportId: powerBIGeneratorData.reportId,
-          datasetId: powerBIGeneratorData.datasetId,
-          coreDatasetId: powerBIGeneratorData.coreDatasetId
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate PowerBI embed details');
-      }
-
-      const data = await response.json();
+      const data = await fetchEmbedDetails(
+        formData.reportId,
+        formData.datasetId,
+        formData.coreDatasetId,
+        token!
+      );
+      
       setGeneratedEmbed(data);
       
       // Auto-fill the form with generated data
       setFormData(prev => ({
         ...prev,
-        reportId: powerBIGeneratorData.reportId,
         embedUrl: data.embedUrl,
         embedToken: data.embedToken
       }));
@@ -192,15 +203,12 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
       powerBIReportId: report.powerBIReportId,
       clientId: report.clientId || '',
       reportId: report.reportId || '',
+      datasetId: report.datasetId || '',
+      coreDatasetId: report.coreDatasetId || '',
       embedUrl: report.embedUrl || '',
       embedToken: report.embedToken || '',
       tenantId: report.tenantId || '',
       isActive: report.isActive !== false
-    });
-    setPowerBIGeneratorData({
-      reportId: report.reportId || '',
-      datasetId: '',
-      coreDatasetId: ''
     });
     setGeneratedEmbed(null);
     setShowModal(true);
@@ -217,41 +225,69 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
       powerBIReportId: '',
       clientId: '',
       reportId: '',
+      datasetId: '',
+      coreDatasetId: '',
       embedUrl: '',
       embedToken: '',
       tenantId: '',
       isActive: true
     });
-    setPowerBIGeneratorData({
-      reportId: '',
-      datasetId: '',
-      coreDatasetId: ''
-    });
     setGeneratedEmbed(null);
     setShowModal(true);
   };
 
-  const handleSaveReport = () => {
+  const handleSaveReport = async () => {
     if (!formData.id || !formData.title) return;
 
-    const updatedReportsData = { ...reportsData };
-    
-    if (editingReport) {
-      // Edit existing report
-      const reportIndex = updatedReportsData[editingDepartment].findIndex(r => r.id === editingReport.id);
-      if (reportIndex !== -1) {
-        updatedReportsData[editingDepartment][reportIndex] = { ...formData };
+    try {
+      setSaving(true);
+      setError('');
+      
+      const reportData = { ...formData };
+      
+      // Auto-generate embed details if all required fields are present
+      if (reportData.reportId && reportData.datasetId && reportData.coreDatasetId) {
+        try {
+          const token = localStorage.getItem('jwt_token');
+          const { embedToken, embedUrl } = await fetchEmbedDetails(
+            reportData.reportId,
+            reportData.datasetId,
+            reportData.coreDatasetId,
+            token!
+          );
+          reportData.embedToken = embedToken;
+          reportData.embedUrl = embedUrl;
+        } catch (embedError) {
+          console.error('Failed to generate embed details:', embedError);
+          setError('Failed to generate PowerBI embed details. Report will be saved without embed info.');
+        }
       }
-    } else {
-      // Add new report
-      if (!updatedReportsData[editingDepartment]) {
-        updatedReportsData[editingDepartment] = [];
-      }
-      updatedReportsData[editingDepartment].push({ ...formData });
-    }
 
-    setReportsData(updatedReportsData);
-    setShowModal(false);
+      const updatedReportsData = { ...reportsData };
+      
+      if (editingReport) {
+        // Edit existing report
+        const reportIndex = updatedReportsData[editingDepartment].findIndex(r => r.id === editingReport.id);
+        if (reportIndex !== -1) {
+          updatedReportsData[editingDepartment][reportIndex] = { ...reportData };
+        }
+      } else {
+        // Add new report
+        if (!updatedReportsData[editingDepartment]) {
+          updatedReportsData[editingDepartment] = [];
+        }
+        updatedReportsData[editingDepartment].push({ ...reportData });
+      }
+
+      setReportsData(updatedReportsData);
+      setShowModal(false);
+      setSuccess('Report saved successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDeleteReport = (department: string, reportId: string) => {
@@ -482,11 +518,11 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
             <Card className="mb-3">
               <Card.Header className="d-flex align-items-center">
                 <Wand2 size={16} className="me-2" />
-                <strong>PowerBI Embed Generator</strong>
+                <strong>PowerBI Configuration</strong>
               </Card.Header>
               <Card.Body>
                 <p className="text-muted small mb-3">
-                  Generate embed token and URL automatically using PowerBI API
+                  Enter PowerBI IDs to automatically generate embed details
                 </p>
                 <Row>
                   <Col md={4}>
@@ -494,8 +530,8 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                       <Form.Label>Report ID</Form.Label>
                       <Form.Control
                         type="text"
-                        value={powerBIGeneratorData.reportId}
-                        onChange={(e) => setPowerBIGeneratorData({...powerBIGeneratorData, reportId: e.target.value})}
+                        value={formData.reportId}
+                        onChange={(e) => setFormData({...formData, reportId: e.target.value})}
                         placeholder="PowerBI Report ID"
                       />
                     </Form.Group>
@@ -505,8 +541,8 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                       <Form.Label>Dataset ID</Form.Label>
                       <Form.Control
                         type="text"
-                        value={powerBIGeneratorData.datasetId}
-                        onChange={(e) => setPowerBIGeneratorData({...powerBIGeneratorData, datasetId: e.target.value})}
+                        value={formData.datasetId}
+                        onChange={(e) => setFormData({...formData, datasetId: e.target.value})}
                         placeholder="Primary Dataset ID"
                       />
                     </Form.Group>
@@ -516,8 +552,8 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                       <Form.Label>Core Dataset ID</Form.Label>
                       <Form.Control
                         type="text"
-                        value={powerBIGeneratorData.coreDatasetId}
-                        onChange={(e) => setPowerBIGeneratorData({...powerBIGeneratorData, coreDatasetId: e.target.value})}
+                        value={formData.coreDatasetId}
+                        onChange={(e) => setFormData({...formData, coreDatasetId: e.target.value})}
                         placeholder="Core/Shared Dataset ID"
                       />
                     </Form.Group>
@@ -598,8 +634,12 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
           <Button variant="secondary" onClick={() => setShowModal(false)}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleSaveReport}>
-            {editingReport ? 'Update Report' : 'Add Report'}
+          <Button 
+            variant="primary" 
+            onClick={handleSaveReport}
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : (editingReport ? 'Update Report' : 'Add Report')}
           </Button>
         </Modal.Footer>
       </Modal>
