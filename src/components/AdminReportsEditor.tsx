@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Form, Alert, Spinner, Modal, Accordion } from 'react-bootstrap';
 import { Plus, Edit, Trash2, Save, ToggleLeft, ToggleRight, Eye, Wand2 } from 'lucide-react';
@@ -28,6 +27,27 @@ interface ReportsData {
 interface AdminReportsEditorProps {
   onStatsUpdate?: () => void;
 }
+
+/**
+ * AdminReportsEditor Component - Comprehensive interface for managing all report configurations
+ * 
+ * This is the primary administrative interface for report management, providing:
+ * - Complete CRUD operations for reports across all departments
+ * - PowerBI configuration management with automatic embed token generation
+ * - Department-based report organization with accordion interface
+ * - Real-time report status management (Active/Inactive toggle)
+ * - Integrated PowerBI viewer for testing reports
+ * - Bulk operations and batch updates for efficient management
+ * 
+ * Key Features:
+ * - Accordion-based department organization for scalable report management
+ * - Modal-based report editing with comprehensive form validation
+ * - Automatic PowerBI embed token generation with real-time feedback
+ * - Manual override options for advanced PowerBI configurations
+ * - Visual status indicators and interactive report cards
+ * - Integrated report preview functionality
+ * - Save-all functionality for batch updates
+ */
 
 // Helper function to fetch embed details
 async function fetchEmbedDetails(reportId: string, datasetId: string, coreDatasetId: string, token: string) {
@@ -83,10 +103,17 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
     coreDatasetId: ''
   });
 
+  /**
+   * Effect hook to fetch all reports data when component mounts
+   */
   useEffect(() => {
     fetchReportsData();
   }, []);
 
+  /**
+   * Fetches all reports data organized by department from the admin API
+   * Loads the complete report configuration including PowerBI settings
+   */
   const fetchReportsData = async () => {
     setLoading(true);
     setError('');
@@ -112,6 +139,11 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
     }
   };
 
+  /**
+   * Generates PowerBI embed token and URL using the form's current configuration
+   * Validates required fields and provides real-time feedback to the user
+   * Auto-fills the embed URL and token fields upon successful generation
+   */
   const generatePowerBIEmbed = async () => {
     if (!formData.reportId || !formData.datasetId || !formData.coreDatasetId) {
       setError('Please fill in Report ID, Dataset ID, and Core Dataset ID');
@@ -146,6 +178,10 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
     }
   };
 
+  /**
+   * Saves all report data changes to the backend in a single operation
+   * Provides batch update functionality for efficient data management
+   */
   const saveReportsData = async () => {
     setSaving(true);
     setError('');
@@ -179,6 +215,13 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
     }
   };
 
+  /**
+   * Toggles the active/inactive status of a specific report
+   * Updates the UI immediately for responsive user experience
+   * 
+   * @param department - Department containing the report
+   * @param reportId - ID of the report to toggle
+   */
   const toggleReportStatus = (department: string, reportId: string) => {
     const updatedReportsData = { ...reportsData };
     const reportIndex = updatedReportsData[department].findIndex(r => r.id === reportId);
@@ -188,10 +231,23 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
     }
   };
 
+  /**
+   * Handles report viewing by setting up PowerBI viewer
+   * Creates a temporary report object for the viewer component
+   * 
+   * @param report - Report object to view
+   */
   const handleViewReport = (report: Report) => {
     setSelectedReport(report);
   };
 
+  /**
+   * Initiates report editing by opening the modal with pre-filled data
+   * Sets up the form state with the current report configuration
+   * 
+   * @param department - Department containing the report
+   * @param report - Report object to edit
+   */
   const handleEditReport = (department: string, report: Report) => {
     setEditingDepartment(department);
     setEditingReport(report);
@@ -214,6 +270,12 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
     setShowModal(true);
   };
 
+  /**
+   * Initiates new report creation for a specific department
+   * Opens the modal with empty form fields and department pre-selected
+   * 
+   * @param department - Department to add the report to
+   */
   const handleAddReport = (department: string) => {
     setEditingDepartment(department);
     setEditingReport(null);
@@ -236,6 +298,11 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
     setShowModal(true);
   };
 
+  /**
+   * Saves report changes (both new and edited reports)
+   * Handles PowerBI embed token generation automatically
+   * Updates local state and provides user feedback
+   */
   const handleSaveReport = async () => {
     if (!formData.id || !formData.title) return;
 
@@ -290,6 +357,13 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
     }
   };
 
+  /**
+   * Removes a report from the specified department
+   * Updates local state immediately for responsive UI
+   * 
+   * @param department - Department containing the report
+   * @param reportId - ID of the report to delete
+   */
   const handleDeleteReport = (department: string, reportId: string) => {
     const updatedReportsData = { ...reportsData };
     updatedReportsData[department] = updatedReportsData[department].filter(r => r.id !== reportId);
@@ -327,10 +401,12 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
 
   return (
     <>
+      {/* Header section with save functionality */}
       <Row className="mb-4">
         <Col>
           <div className="d-flex justify-content-between align-items-center">
             <h5>Manage Reports & PowerBI Configuration</h5>
+            {/* Global save button for batch updates */}
             <Button
               variant="primary"
               onClick={saveReportsData}
@@ -344,6 +420,7 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
         </Col>
       </Row>
 
+      {/* Status message displays */}
       {error && (
         <Alert variant="danger" className="mb-3">
           {error}
@@ -356,13 +433,16 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
         </Alert>
       )}
 
+      {/* Department-based accordion organization */}
       <Accordion>
         {Object.entries(reportsData).map(([department, reports]) => (
           <Accordion.Item key={department} eventKey={department}>
+            {/* Accordion header with department stats */}
             <Accordion.Header>
               {department} Department ({reports.length} reports, {reports.filter(r => r.isActive !== false).length} active)
             </Accordion.Header>
             <Accordion.Body>
+              {/* Add new report button */}
               <div className="mb-3">
                 <Button
                   variant="outline-primary"
@@ -375,13 +455,16 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                 </Button>
               </div>
               
+              {/* Reports grid for the department */}
               <Row className="g-3">
                 {reports.map((report) => (
                   <Col key={report.id} md={6} lg={4}>
                     <Card className={`h-100 ${report.isActive === false ? 'opacity-50' : ''}`}>
                       <Card.Body>
+                        {/* Report card header with status toggle */}
                         <div className="d-flex justify-content-between align-items-start mb-2">
                           <h6 className="fw-bold">{report.title}</h6>
+                          {/* Active/Inactive toggle button */}
                           <Button
                             variant="link"
                             size="sm"
@@ -394,6 +477,8 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                             }
                           </Button>
                         </div>
+                        
+                        {/* Report information display */}
                         <p className="text-muted small mb-2">{report.description}</p>
                         <p className="text-muted small mb-2">
                           <strong>Status:</strong> {report.isActive !== false ? 'Active' : 'Inactive'}<br/>
@@ -402,7 +487,10 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                           <strong>Report ID:</strong> {report.reportId?.substring(0, 8) || 'Not set'}...<br/>
                           <strong>Has Embed:</strong> {report.embedUrl ? 'Yes' : 'No'}
                         </p>
+                        
+                        {/* Report action buttons */}
                         <div className="d-flex gap-2 flex-wrap">
+                          {/* View report button */}
                           <Button
                             variant="outline-success"
                             size="sm"
@@ -412,6 +500,7 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                           >
                             <Eye size={14} />
                           </Button>
+                          {/* Edit report button */}
                           <Button
                             variant="outline-primary"
                             size="sm"
@@ -419,6 +508,7 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                           >
                             <Edit size={14} />
                           </Button>
+                          {/* Delete report button */}
                           <Button
                             variant="outline-danger"
                             size="sm"
@@ -437,6 +527,7 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
         ))}
       </Accordion>
 
+      {/* Report editing/creation modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>
@@ -445,6 +536,7 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
         </Modal.Header>
         <Modal.Body>
           <Form>
+            {/* Basic report information fields */}
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
@@ -470,6 +562,8 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                 </Form.Group>
               </Col>
             </Row>
+            
+            {/* Report title and description */}
             <Form.Group className="mb-3">
               <Form.Label>Title</Form.Label>
               <Form.Control
@@ -489,6 +583,8 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                 placeholder="Report description"
               />
             </Form.Group>
+            
+            {/* Icon and PowerBI ID fields */}
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
@@ -524,6 +620,8 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                 <p className="text-muted small mb-3">
                   Enter PowerBI IDs to automatically generate embed details
                 </p>
+                
+                {/* PowerBI configuration input fields */}
                 <Row>
                   <Col md={4}>
                     <Form.Group className="mb-3">
@@ -559,6 +657,8 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                     </Form.Group>
                   </Col>
                 </Row>
+                
+                {/* Generate embed details button */}
                 <div className="d-flex gap-2 mb-3">
                   <Button
                     variant="success"
@@ -571,6 +671,7 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                   </Button>
                 </div>
 
+                {/* Generated embed details display */}
                 {generatedEmbed && (
                   <div>
                     <Alert variant="success">
@@ -601,7 +702,7 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
               </Card.Body>
             </Card>
 
-            {/* Manual Override Section */}
+            {/* Manual Override Section for advanced users */}
             <Card>
               <Card.Header>
                 <strong>Manual Override (Optional)</strong>
@@ -631,6 +732,7 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
           </Form>
         </Modal.Body>
         <Modal.Footer>
+          {/* Modal action buttons */}
           <Button variant="secondary" onClick={() => setShowModal(false)}>
             Cancel
           </Button>

@@ -4,6 +4,7 @@ import { Row, Col, Card, Button, Form, Alert, Spinner, Modal } from 'react-boots
 import { Edit, Save } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 
+// Type definitions for report and reports data structures
 interface Report {
   id: string;
   title: string;
@@ -16,7 +17,24 @@ interface ReportsData {
   [department: string]: Report[];
 }
 
+/**
+ * AdminPowerBIEditor Component - Interface for editing PowerBI report IDs
+ * 
+ * This component provides administrators with the ability to:
+ * - View all reports organized by department
+ * - Edit PowerBI report IDs for individual reports
+ * - Manage PowerBI configuration without affecting other report properties
+ * - Bulk view and update PowerBI configurations across the system
+ * 
+ * Key Features:
+ * - Department-based organization of reports
+ * - Modal-based editing interface for focused PowerBI ID updates
+ * - Real-time validation and error handling
+ * - Batch operations support for efficient management
+ * - Visual feedback for successful updates
+ */
 const AdminPowerBIEditor: React.FC = () => {
+  // State management for reports data and UI controls
   const [reportsData, setReportsData] = useState<ReportsData>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -27,10 +45,18 @@ const AdminPowerBIEditor: React.FC = () => {
   const [editingDepartment, setEditingDepartment] = useState('');
   const [newPowerBIId, setNewPowerBIId] = useState('');
 
+  /**
+   * Effect hook to fetch reports data when component mounts
+   */
   useEffect(() => {
     fetchReportsData();
   }, []);
 
+  /**
+   * Fetches all reports data organized by department from admin API
+   * Uses JWT authentication to ensure admin-only access
+   * Handles various error states and network issues
+   */
   const fetchReportsData = async () => {
     setLoading(true);
     setError('');
@@ -56,6 +82,13 @@ const AdminPowerBIEditor: React.FC = () => {
     }
   };
 
+  /**
+   * Initiates PowerBI ID editing for a specific report
+   * Opens modal with current PowerBI ID pre-filled for editing
+   * 
+   * @param department - Department name containing the report
+   * @param report - Report object to be edited
+   */
   const handleEditPowerBI = (department: string, report: Report) => {
     setEditingDepartment(department);
     setEditingReport(report);
@@ -63,6 +96,11 @@ const AdminPowerBIEditor: React.FC = () => {
     setShowModal(true);
   };
 
+  /**
+   * Saves the updated PowerBI ID to the backend
+   * Updates local state to reflect changes immediately
+   * Provides user feedback on success or failure
+   */
   const handleSavePowerBI = async () => {
     if (!editingReport || !newPowerBIId) return;
 
@@ -88,7 +126,7 @@ const AdminPowerBIEditor: React.FC = () => {
         throw new Error('Failed to update PowerBI ID');
       }
 
-      // Update local state
+      // Update local state to reflect the change immediately
       const updatedReportsData = { ...reportsData };
       const reportIndex = updatedReportsData[editingDepartment].findIndex(
         r => r.id === editingReport.id
@@ -98,6 +136,7 @@ const AdminPowerBIEditor: React.FC = () => {
       }
       setReportsData(updatedReportsData);
 
+      // Provide success feedback and close modal
       setSuccess('PowerBI ID updated successfully!');
       setShowModal(false);
       setTimeout(() => setSuccess(''), 3000);
@@ -108,6 +147,7 @@ const AdminPowerBIEditor: React.FC = () => {
     }
   };
 
+  // Loading state display
   if (loading) {
     return (
       <div className="text-center">
@@ -119,6 +159,7 @@ const AdminPowerBIEditor: React.FC = () => {
 
   return (
     <>
+      {/* Header section with title and description */}
       <Row className="mb-4">
         <Col>
           <h4>PowerBI Report Management</h4>
@@ -128,6 +169,7 @@ const AdminPowerBIEditor: React.FC = () => {
         </Col>
       </Row>
 
+      {/* Error and success message displays */}
       {error && (
         <Alert variant="danger" className="mb-3">
           {error}
@@ -140,6 +182,7 @@ const AdminPowerBIEditor: React.FC = () => {
         </Alert>
       )}
 
+      {/* Department-based reports organization */}
       {Object.entries(reportsData).map(([department, reports]) => (
         <Card key={department} className="mb-4">
           <Card.Header>
@@ -151,13 +194,18 @@ const AdminPowerBIEditor: React.FC = () => {
                 <Col key={report.id} md={6} lg={4}>
                   <Card className="h-100 border">
                     <Card.Body>
+                      {/* Report information display */}
                       <h6 className="fw-bold">{report.title}</h6>
                       <p className="text-muted small mb-2">{report.description}</p>
+                      
+                      {/* Current PowerBI ID display */}
                       <div className="mb-3">
                         <strong>Current PowerBI ID:</strong>
                         <br />
                         <code className="small">{report.powerBIReportId}</code>
                       </div>
+                      
+                      {/* Edit PowerBI ID button */}
                       <Button
                         variant="outline-primary"
                         size="sm"
@@ -176,6 +224,7 @@ const AdminPowerBIEditor: React.FC = () => {
         </Card>
       ))}
 
+      {/* PowerBI ID Edit Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>
@@ -184,6 +233,7 @@ const AdminPowerBIEditor: React.FC = () => {
         </Modal.Header>
         <Modal.Body>
           <Form>
+            {/* Read-only report information */}
             <Form.Group className="mb-3">
               <Form.Label>Report Title</Form.Label>
               <Form.Control
@@ -200,6 +250,8 @@ const AdminPowerBIEditor: React.FC = () => {
                 disabled
               />
             </Form.Group>
+            
+            {/* Editable PowerBI ID field */}
             <Form.Group className="mb-3">
               <Form.Label>PowerBI Report ID</Form.Label>
               <Form.Control
@@ -215,6 +267,7 @@ const AdminPowerBIEditor: React.FC = () => {
           </Form>
         </Modal.Body>
         <Modal.Footer>
+          {/* Modal action buttons */}
           <Button variant="secondary" onClick={() => setShowModal(false)}>
             Cancel
           </Button>

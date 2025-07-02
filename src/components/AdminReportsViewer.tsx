@@ -5,6 +5,7 @@ import { Eye, RefreshCw } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 import PowerBIViewer from './PowerBIViewer';
 
+// Type definition for report data structure
 interface Report {
   id: string;
   title: string;
@@ -22,17 +23,42 @@ interface Report {
   department: string;
 }
 
+/**
+ * AdminReportsViewer Component - Interface for admins to preview all system reports
+ * 
+ * This component provides administrators with the ability to:
+ * - View all reports across all departments in a unified interface
+ * - Generate fresh PowerBI embed tokens for secure report viewing
+ * - Preview reports with the same experience as end users
+ * - Filter and identify reports by department and status
+ * 
+ * Key Features:
+ * - Cross-department report visibility for admins
+ * - Dynamic PowerBI embed token generation for security
+ * - Real-time report status indicators (Active/Inactive)
+ * - Responsive card-based layout for easy browsing
+ * - Integration with PowerBIViewer for seamless report display
+ */
 const AdminReportsViewer: React.FC = () => {
+  // State management for reports data and UI controls
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [generatingEmbed, setGeneratingEmbed] = useState(false);
 
+  /**
+   * Effect hook to fetch all reports when component mounts
+   */
   useEffect(() => {
     fetchAllReports();
   }, []);
 
+  /**
+   * Fetches all reports from all departments via admin API endpoint
+   * Only accessible to users with admin privileges
+   * Handles various error states and data structure validation
+   */
   const fetchAllReports = async () => {
     setLoading(true);
     setError('');
@@ -52,6 +78,7 @@ const AdminReportsViewer: React.FC = () => {
       const data = await response.json();
       console.log('Fetched reports data:', data);
       
+      // Validate data structure before setting state
       if (data.reports && Array.isArray(data.reports)) {
         setReports(data.reports);
       } else {
@@ -66,7 +93,15 @@ const AdminReportsViewer: React.FC = () => {
     }
   };
 
+  /**
+   * Handles report viewing by generating fresh PowerBI embed tokens
+   * Validates report configuration before attempting to generate embed details
+   * Updates selected report with fresh embed token and URL for secure viewing
+   * 
+   * @param report - Report object containing PowerBI configuration
+   */
   const handleViewReport = async (report: Report) => {
+    // Validate required PowerBI configuration fields
     if (!report.reportId || !report.datasetId || !report.coreDatasetId) {
       setError('Report is missing required PowerBI configuration (reportId, datasetId, coreDatasetId)');
       return;
@@ -77,6 +112,8 @@ const AdminReportsViewer: React.FC = () => {
     
     try {
       const token = localStorage.getItem('jwt_token');
+      
+      // Generate fresh embed token and URL for security
       const response = await fetch(API_ENDPOINTS.generateEmbed, {
         method: 'POST',
         headers: {
@@ -97,7 +134,7 @@ const AdminReportsViewer: React.FC = () => {
 
       const { embedToken, embedUrl } = await response.json();
       
-      // Update the report with fresh embed details
+      // Create updated report object with fresh embed details
       const updatedReport = {
         ...report,
         embedToken,
@@ -113,6 +150,7 @@ const AdminReportsViewer: React.FC = () => {
     }
   };
 
+  // Render PowerBI viewer when a report is selected
   if (selectedReport) {
     return (
       <PowerBIViewer
@@ -133,6 +171,7 @@ const AdminReportsViewer: React.FC = () => {
     );
   }
 
+  // Loading state display
   if (loading) {
     return (
       <div className="text-center">
@@ -144,6 +183,7 @@ const AdminReportsViewer: React.FC = () => {
 
   return (
     <>
+      {/* Header section with title and refresh functionality */}
       <Row className="mb-4">
         <Col>
           <div className="d-flex justify-content-between align-items-center">
@@ -161,12 +201,14 @@ const AdminReportsViewer: React.FC = () => {
         </Col>
       </Row>
 
+      {/* Error message display */}
       {error && (
         <Alert variant="danger" className="mb-3">
           {error}
         </Alert>
       )}
 
+      {/* Embed token generation status */}
       {generatingEmbed && (
         <Alert variant="info" className="mb-3">
           <Spinner animation="border" size="sm" className="me-2" />
@@ -174,27 +216,38 @@ const AdminReportsViewer: React.FC = () => {
         </Alert>
       )}
 
+      {/* Reports grid display */}
       <Row className="g-3">
         {reports.map((report) => (
           <Col key={`${report.department}-${report.id}`} md={6} lg={4}>
             <Card className={`h-100 ${!report.isActive ? 'opacity-50' : ''}`}>
               <Card.Body>
+                {/* Report header with title and status badges */}
                 <div className="d-flex justify-content-between align-items-start mb-2">
                   <h6 className="fw-bold">{report.title}</h6>
                   <div className="d-flex gap-1">
+                    {/* Active/Inactive status badge */}
                     <Badge bg={report.isActive ? 'success' : 'secondary'}>
                       {report.isActive ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
                 </div>
+                
+                {/* Department badge */}
                 <Badge bg="primary" className="mb-2">{report.department}</Badge>
+                
+                {/* Report description */}
                 <p className="text-muted small mb-2">{report.description}</p>
+                
+                {/* PowerBI configuration details (truncated for display) */}
                 <p className="text-muted small mb-3">
                   <strong>PowerBI ID:</strong> {report.powerBIReportId}<br/>
                   <strong>Report ID:</strong> {report.reportId?.substring(0, 8) || 'Not set'}...<br/>
                   <strong>Dataset ID:</strong> {report.datasetId?.substring(0, 8) || 'Not set'}...<br/>
                   <strong>Core Dataset ID:</strong> {report.coreDatasetId?.substring(0, 8) || 'Not set'}...
                 </p>
+                
+                {/* View report button with conditional enabling */}
                 <Button
                   variant="outline-primary"
                   size="sm"
@@ -211,6 +264,7 @@ const AdminReportsViewer: React.FC = () => {
         ))}
       </Row>
 
+      {/* Empty state display */}
       {reports.length === 0 && !loading && (
         <div className="text-center py-5">
           <p className="text-muted">No reports found.</p>
