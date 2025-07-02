@@ -1,4 +1,3 @@
-
 import express, { Request, Response, NextFunction } from 'express';
 import { Issuer } from 'openid-client';
 import cors from 'cors';
@@ -18,7 +17,7 @@ const allowedOrigins = [
 ];
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 const { CLIENT_ID, CLIENT_SECRET, TENANT_ID, REDIRECT_URI, JWT_SECRET } = process.env;
 
@@ -82,6 +81,28 @@ const verifyJWT = (req: AuthenticatedRequest, res: Response, next: NextFunction)
 const verifyAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (!req.user?.isAdmin) return res.status(403).json({ error: 'Admin only' });
   next();
+};
+
+// Rate limiting for embed generation
+const embedRequestCounts = new Map<string, { count: number; resetTime: number }>();
+const EMBED_RATE_LIMIT = 10; // requests per minute
+const EMBED_RATE_WINDOW = 60 * 1000; // 1 minute
+
+const checkEmbedRateLimit = (userEmail: string): boolean => {
+  const now = Date.now();
+  const userLimit = embedRequestCounts.get(userEmail);
+  
+  if (!userLimit || now > userLimit.resetTime) {
+    embedRequestCounts.set(userEmail, { count: 1, resetTime: now + EMBED_RATE_WINDOW });
+    return true;
+  }
+  
+  if (userLimit.count >= EMBED_RATE_LIMIT) {
+    return false;
+  }
+  
+  userLimit.count++;
+  return true;
 };
 
 // Generate PowerBI embed token and URL
@@ -166,12 +187,17 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, coreDat
   return { embedToken, embedUrl };
 };
 
-// 🆕 NEW ROUTE: Generate embed token and URL dynamically for any authenticated user
+// 🆕 NEW ROUTE: Generate embed token and URL dynamically for any authenticated user with rate limiting
 app.post('/api/reports/generate-embed', verifyJWT, async (req: AuthenticatedRequest, res: Response) => {
   const { reportId, datasetId, coreDatasetId } = req.body;
   
   if (!reportId || !datasetId || !coreDatasetId) {
     return res.status(400).json({ error: 'Missing embed parameters: reportId, datasetId, and coreDatasetId are required' });
+  }
+
+  // Apply rate limiting
+  if (!checkEmbedRateLimit(req.user!.email)) {
+    return res.status(429).json({ error: 'Rate limit exceeded. Please wait before generating more embed tokens.' });
   }
 
   try {
@@ -265,12 +291,17 @@ app.delete('/api/admin/departments/:departmentName', verifyJWT, verifyAdmin, (re
     : res.status(500).json({ error: 'Failed to delete department' });
 });
 
-// 🔐 ADMIN - generate PowerBI embed details
-app.post('/api/admin/generate-embed', verifyJWT, verifyAdmin, async (req, res) => {
+// 🔐 ADMIN - generate PowerBI embed details with rate limiting
+app.post('/api/admin/generate-embed', verifyJWT, verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
   const { reportId, datasetId, coreDatasetId } = req.body;
   
   if (!reportId || !datasetId || !coreDatasetId) {
     return res.status(400).json({ error: 'Report ID, dataset ID, and core dataset ID are required' });
+  }
+
+  // Apply rate limiting for admins too
+  if (!checkEmbedRateLimit(req.user!.email)) {
+    return res.status(429).json({ error: 'Rate limit exceeded. Please wait before generating more embed tokens.' });
   }
 
   try {

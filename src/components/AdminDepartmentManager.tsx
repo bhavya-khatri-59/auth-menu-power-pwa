@@ -26,6 +26,10 @@ const AdminDepartmentManager: React.FC<AdminDepartmentManagerProps> = ({ onDepar
     setError('');
     try {
       const token = localStorage.getItem('jwt_token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
       const response = await fetch(API_ENDPOINTS.adminDepartments, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -34,12 +38,19 @@ const AdminDepartmentManager: React.FC<AdminDepartmentManagerProps> = ({ onDepar
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed');
+        }
+        if (response.status === 403) {
+          throw new Error('Admin access required');
+        }
         throw new Error('Failed to fetch departments');
       }
 
       const data = await response.json();
-      setDepartments(data.departments);
+      setDepartments(data.departments || []);
     } catch (err) {
+      console.error('Error fetching departments:', err);
       setError((err as Error).message);
     } finally {
       setLoading(false);
@@ -47,31 +58,50 @@ const AdminDepartmentManager: React.FC<AdminDepartmentManagerProps> = ({ onDepar
   };
 
   const handleAddDepartment = async () => {
-    if (!newDepartmentName.trim()) return;
+    const trimmedName = newDepartmentName.trim();
+    if (!trimmedName) {
+      setError('Department name cannot be empty');
+      return;
+    }
+
+    if (departments.includes(trimmedName)) {
+      setError('Department already exists');
+      return;
+    }
 
     setSaving(true);
     setError('');
     setSuccess('');
     try {
       const token = localStorage.getItem('jwt_token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
       const response = await fetch(API_ENDPOINTS.adminDepartments, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ departmentName: newDepartmentName.trim() }),
+        body: JSON.stringify({ departmentName: trimmedName }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          throw new Error('Authentication failed');
+        }
+        if (response.status === 403) {
+          throw new Error('Admin access required');
+        }
         throw new Error(errorData.error || 'Failed to add department');
       }
 
       setSuccess('Department added successfully!');
       setNewDepartmentName('');
       setShowModal(false);
-      fetchDepartments();
+      await fetchDepartments();
       
       if (onDepartmentChange) {
         onDepartmentChange();
@@ -79,6 +109,7 @@ const AdminDepartmentManager: React.FC<AdminDepartmentManagerProps> = ({ onDepar
       
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
+      console.error('Error adding department:', err);
       setError((err as Error).message);
     } finally {
       setSaving(false);
@@ -94,6 +125,10 @@ const AdminDepartmentManager: React.FC<AdminDepartmentManagerProps> = ({ onDepar
     setSuccess('');
     try {
       const token = localStorage.getItem('jwt_token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
       const response = await fetch(API_ENDPOINTS.adminDeleteDepartment(departmentName), {
         method: 'DELETE',
         headers: {
@@ -103,11 +138,17 @@ const AdminDepartmentManager: React.FC<AdminDepartmentManagerProps> = ({ onDepar
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed');
+        }
+        if (response.status === 403) {
+          throw new Error('Admin access required');
+        }
         throw new Error('Failed to delete department');
       }
 
       setSuccess('Department deleted successfully!');
-      fetchDepartments();
+      await fetchDepartments();
       
       if (onDepartmentChange) {
         onDepartmentChange();
@@ -115,8 +156,15 @@ const AdminDepartmentManager: React.FC<AdminDepartmentManagerProps> = ({ onDepar
       
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
+      console.error('Error deleting department:', err);
       setError((err as Error).message);
     }
+  };
+
+  const handleModalClose = () => {
+    setShowModal(false);
+    setNewDepartmentName('');
+    setError('');
   };
 
   if (loading) {
@@ -163,33 +211,39 @@ const AdminDepartmentManager: React.FC<AdminDepartmentManagerProps> = ({ onDepar
 
       <Card>
         <Card.Body>
-          <ListGroup variant="flush">
-            {departments.map((department) => (
-              <ListGroup.Item key={department} className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className="mb-0">{department}</h6>
-                </div>
-                <Button
-                  variant="outline-danger"
-                  size="sm"
-                  onClick={() => handleDeleteDepartment(department)}
-                  disabled={departments.length <= 1}
-                  title={departments.length <= 1 ? "Cannot delete the last department" : "Delete department"}
-                >
-                  <Trash2 size={14} />
-                </Button>
-              </ListGroup.Item>
-            ))}
-          </ListGroup>
+          {departments.length > 0 ? (
+            <ListGroup variant="flush">
+              {departments.map((department) => (
+                <ListGroup.Item key={department} className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 className="mb-0">{department}</h6>
+                  </div>
+                  <Button
+                    variant="outline-danger"
+                    size="sm"
+                    onClick={() => handleDeleteDepartment(department)}
+                    disabled={departments.length <= 1}
+                    title={departments.length <= 1 ? "Cannot delete the last department" : "Delete department"}
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-muted mb-0">No departments found</p>
+            </div>
+          )}
         </Card.Body>
       </Card>
 
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
+      <Modal show={showModal} onHide={handleModalClose}>
         <Modal.Header closeButton>
           <Modal.Title>Add New Department</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form>
+          <Form onSubmit={(e) => { e.preventDefault(); handleAddDepartment(); }}>
             <Form.Group className="mb-3">
               <Form.Label>Department Name</Form.Label>
               <Form.Control
@@ -197,13 +251,14 @@ const AdminDepartmentManager: React.FC<AdminDepartmentManagerProps> = ({ onDepar
                 value={newDepartmentName}
                 onChange={(e) => setNewDepartmentName(e.target.value)}
                 placeholder="Enter department name"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddDepartment()}
+                maxLength={50}
+                required
               />
             </Form.Group>
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
+          <Button variant="secondary" onClick={handleModalClose}>
             Cancel
           </Button>
           <Button 
@@ -211,7 +266,14 @@ const AdminDepartmentManager: React.FC<AdminDepartmentManagerProps> = ({ onDepar
             onClick={handleAddDepartment}
             disabled={saving || !newDepartmentName.trim()}
           >
-            {saving ? 'Adding...' : 'Add Department'}
+            {saving ? (
+              <>
+                <Spinner animation="border" size="sm" className="me-2" />
+                Adding...
+              </>
+            ) : (
+              'Add Department'
+            )}
           </Button>
         </Modal.Footer>
       </Modal>

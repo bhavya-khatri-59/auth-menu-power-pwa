@@ -13,6 +13,8 @@ interface Report {
   powerBIReportId: string;
   clientId?: string;
   reportId?: string;
+  datasetId?: string;
+  coreDatasetId?: string;
   embedUrl?: string;
   embedToken?: string;
   tenantId?: string;
@@ -25,6 +27,7 @@ const AdminReportsViewer: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [generatingEmbed, setGeneratingEmbed] = useState(false);
 
   useEffect(() => {
     fetchAllReports();
@@ -49,7 +52,6 @@ const AdminReportsViewer: React.FC = () => {
       const data = await response.json();
       console.log('Fetched reports data:', data);
       
-      // Handle the response structure properly - data.reports should be the flattened array
       if (data.reports && Array.isArray(data.reports)) {
         setReports(data.reports);
       } else {
@@ -61,6 +63,53 @@ const AdminReportsViewer: React.FC = () => {
       setError((err as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleViewReport = async (report: Report) => {
+    if (!report.reportId || !report.datasetId || !report.coreDatasetId) {
+      setError('Report is missing required PowerBI configuration (reportId, datasetId, coreDatasetId)');
+      return;
+    }
+
+    setGeneratingEmbed(true);
+    setError('');
+    
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const response = await fetch(API_ENDPOINTS.generateEmbed, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reportId: report.reportId,
+          datasetId: report.datasetId,
+          coreDatasetId: report.coreDatasetId
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate embed token');
+      }
+
+      const { embedToken, embedUrl } = await response.json();
+      
+      // Update the report with fresh embed details
+      const updatedReport = {
+        ...report,
+        embedToken,
+        embedUrl
+      };
+      
+      setSelectedReport(updatedReport);
+    } catch (err) {
+      console.error('Error generating embed token:', err);
+      setError((err as Error).message);
+    } finally {
+      setGeneratingEmbed(false);
     }
   };
 
@@ -118,6 +167,13 @@ const AdminReportsViewer: React.FC = () => {
         </Alert>
       )}
 
+      {generatingEmbed && (
+        <Alert variant="info" className="mb-3">
+          <Spinner animation="border" size="sm" className="me-2" />
+          Generating fresh embed token...
+        </Alert>
+      )}
+
       <Row className="g-3">
         {reports.map((report) => (
           <Col key={`${report.department}-${report.id}`} md={6} lg={4}>
@@ -136,17 +192,18 @@ const AdminReportsViewer: React.FC = () => {
                 <p className="text-muted small mb-3">
                   <strong>PowerBI ID:</strong> {report.powerBIReportId}<br/>
                   <strong>Report ID:</strong> {report.reportId?.substring(0, 8) || 'Not set'}...<br/>
-                  <strong>Client ID:</strong> {report.clientId?.substring(0, 8) || 'Not set'}...
+                  <strong>Dataset ID:</strong> {report.datasetId?.substring(0, 8) || 'Not set'}...<br/>
+                  <strong>Core Dataset ID:</strong> {report.coreDatasetId?.substring(0, 8) || 'Not set'}...
                 </p>
                 <Button
                   variant="outline-primary"
                   size="sm"
-                  onClick={() => setSelectedReport(report)}
-                  disabled={!report.isActive}
+                  onClick={() => handleViewReport(report)}
+                  disabled={!report.isActive || generatingEmbed || !report.reportId || !report.datasetId || !report.coreDatasetId}
                   className="d-flex align-items-center"
                 >
                   <Eye size={14} className="me-1" />
-                  View Report
+                  {generatingEmbed ? 'Generating...' : 'View Report'}
                 </Button>
               </Card.Body>
             </Card>
