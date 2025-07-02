@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { User, Shield, Mail, Lock } from 'lucide-react';
@@ -7,18 +8,30 @@ interface AuthComponentProps {
   onLogin: (user: { email: string; department: string; isAdmin?: boolean }) => void;
 }
 
+/**
+ * AuthComponent handles user authentication with support for:
+ * - SSO (Single Sign-On) authentication
+ * - Manual email/password login for admins
+ * - Token-based authentication via URL parameters
+ */
 const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
+  // State management for login type and form data
   const [loginType, setLoginType] = useState<'email' | 'phone' | 'sso'>('sso');
   const [formData, setFormData] = useState({ email: '', phone: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  /**
+   * Effect to handle SSO token authentication from URL parameters
+   * Automatically logs in user if valid token is present in URL
+   */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
 
     if (token) {
       try {
+        // Store token and decode user information
         localStorage.setItem('jwt_token', token);
         const decoded = JSON.parse(atob(token.split('.')[1]));
         const user = {
@@ -28,6 +41,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
         };
         onLogin(user);
         localStorage.setItem('user', JSON.stringify(user));
+        // Clean up URL after successful authentication
         window.history.replaceState({}, document.title, '/');
       } catch (err) {
         console.error('Failed to decode token:', err);
@@ -35,6 +49,9 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
     }
   }, [onLogin]);
 
+  /**
+   * Handles manual login form submission for admin users
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -44,8 +61,10 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
       const { email, phone, password } = formData;
       const identifier = loginType === 'email' ? email : phone;
 
+      // Validate required fields
       if (!identifier || !password) throw new Error(`${loginType === 'email' ? 'Email' : 'Phone'} and password are required`);
 
+      // Send login request to backend
       const res = await fetch(API_ENDPOINTS.manualLogin, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -57,6 +76,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
         throw new Error(errData.error || 'Login failed');
       }
 
+      // Process successful login response
       const { token } = await res.json();
       const decoded = JSON.parse(atob(token.split('.')[1]));
       const user = {
@@ -65,6 +85,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
         isAdmin: decoded.isAdmin || false
       };
 
+      // Store authentication data and trigger login callback
       localStorage.setItem('jwt_token', token);
       localStorage.setItem('user', JSON.stringify(user));
       onLogin(user);
@@ -75,16 +96,24 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
     }
   };
 
+  /**
+   * Handles input changes for form fields
+   */
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  /**
+   * Initiates SSO login flow by redirecting to SSO provider
+   */
   const handleSSOLogin = async () => {
     setLoading(true);
     setError('');
     try {
+      // Get SSO login URL from backend
       const res = await fetch(API_ENDPOINTS.loginUrl);
       const data = await res.json();
+      // Redirect to SSO provider
       window.location.href = data.url;
     } catch (err) {
       setError('Failed to initiate SSO login');
@@ -98,15 +127,21 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
         <Col xs={12} sm={10} md={8} lg={6} xl={4}>
           <Card className="auth-card p-4">
             <Card.Body>
+              {/* Centered header with user icon */}
               <div className="text-center mb-2">
-                <User size={60} className="text-primary mb-2" />
+                <div className="d-flex justify-content-center align-items-center mb-2">
+                  <User size={60} className="text-primary" />
+                </div>
                 <h2 className="fw-bold text-primary">Business Portal</h2>
                 <p className="text-muted">Access your department dashboard</p>
               </div>
 
+              {/* Error display */}
               {error && <Alert variant="danger">{error}</Alert>}
 
+              {/* Login method selection and forms */}
               <div className="mb-4">
+                {/* Login type toggle buttons */}
                 <div className="d-flex gap-2 mb-2">
                   <Button variant={loginType === 'sso' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setLoginType('sso')} className="flex-1">
                     <Lock size={16} className="me-1" /> SSO
@@ -116,6 +151,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                   </Button>
                 </div>
 
+                {/* SSO Login Section */}
                 {loginType === 'sso' ? (
                   <div className="text-center">
                     <p className="text-muted mb-3">Single Sign-On Authentication</p>
@@ -131,7 +167,9 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                     </Button>
                   </div>
                 ) : (
+                  // Manual login form for admin users
                   <Form onSubmit={handleSubmit}>
+                    {/* Email input for admin login */}
                     {loginType === 'email' && (
                       <Form.Group className="mb-3">
                         <Form.Label>Email Address</Form.Label>
@@ -145,6 +183,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                         />
                       </Form.Group>
                     )}
+                    {/* Phone input (legacy support) */}
                     {loginType === 'phone' && (
                       <Form.Group className="mb-3">
                         <Form.Label>Phone Number</Form.Label>
@@ -159,6 +198,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                       </Form.Group>
                     )}
 
+                    {/* Password input */}
                     <Form.Group className="mb-4">
                       <Form.Label>Password</Form.Label>
                       <Form.Control
@@ -171,6 +211,7 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                       />
                     </Form.Group>
 
+                    {/* Submit button */}
                     <Button type="submit" variant="primary" size="lg" className="w-100 btn-custom" disabled={loading}>
                       {loading ? (
                         <>
