@@ -1,3 +1,4 @@
+
 import express, { Request, Response, NextFunction } from 'express';
 import { Issuer } from 'openid-client';
 import cors from 'cors';
@@ -165,7 +166,24 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, coreDat
   return { embedToken, embedUrl };
 };
 
-// 📊 GET department reports - Fixed to work for non-admins
+// 🆕 NEW ROUTE: Generate embed token and URL dynamically for any authenticated user
+app.post('/api/reports/generate-embed', verifyJWT, async (req: AuthenticatedRequest, res: Response) => {
+  const { reportId, datasetId, coreDatasetId } = req.body;
+  
+  if (!reportId || !datasetId || !coreDatasetId) {
+    return res.status(400).json({ error: 'Missing embed parameters: reportId, datasetId, and coreDatasetId are required' });
+  }
+
+  try {
+    const { embedToken, embedUrl } = await generatePowerBIEmbed(reportId, datasetId, coreDatasetId);
+    return res.json({ embedToken, embedUrl });
+  } catch (error) {
+    console.error('Embed generation error:', error);
+    return res.status(500).json({ error: 'Failed to generate embed token or URL' });
+  }
+});
+
+// 📊 GET department reports - Updated to include PowerBI details for all users
 app.get('/api/reports/:department', verifyJWT, (req: AuthenticatedRequest, res: Response) => {
   const department = decodeURIComponent(req.params.department);
   const { department: userDept, isAdmin } = req.user!;
@@ -178,11 +196,11 @@ app.get('/api/reports/:department', verifyJWT, (req: AuthenticatedRequest, res: 
   const reports = loadReportsData();
   const departmentReports = reports[department] || [];
 
-  // Filter active reports and include embed details for ALL users (not just admins)
+  // Filter active reports and include all PowerBI details for ALL users
   const filteredReports = departmentReports
     .filter(report => report.isActive !== false)
     .map(report => {
-      const { id, title, description, icon, powerBIReportId, isActive, embedUrl, embedToken, reportId, clientId, tenantId } = report;
+      const { id, title, description, icon, powerBIReportId, isActive, embedUrl, embedToken, reportId, clientId, tenantId, datasetId, coreDatasetId } = report;
       return { 
         id, 
         title, 
@@ -194,7 +212,9 @@ app.get('/api/reports/:department', verifyJWT, (req: AuthenticatedRequest, res: 
         embedToken, 
         reportId, 
         clientId, 
-        tenantId 
+        tenantId,
+        datasetId,
+        coreDatasetId
       };
     });
 
