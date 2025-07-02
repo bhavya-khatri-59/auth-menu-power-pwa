@@ -98,8 +98,8 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
         <Col xs={12} sm={10} md={8} lg={6} xl={4}>
           <Card className="auth-card p-4">
             <Card.Body>
-              <div className="text-center mb-4">
-                <User size={60} className="text-primary mb-3" />
+              <div className="text-center mb-2">
+                <User size={60} className="text-primary mb-2" />
                 <h2 className="fw-bold text-primary">Business Portal</h2>
                 <p className="text-muted">Access your department dashboard</p>
               </div>

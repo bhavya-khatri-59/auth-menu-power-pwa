@@ -120,17 +120,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             </Navbar.Brand>
             
             <div className="d-flex align-items-center gap-2">
-              <Button
-                variant="outline-light"
-                size="sm"
-                onClick={toggleFullscreen}
-                className="d-flex align-items-center"
-              >
-                {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                <span className="d-none d-md-inline ms-1">
-                  {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                </span>
-              </Button>
+              
               <Button
                 variant="outline-light"
                 size="sm"
