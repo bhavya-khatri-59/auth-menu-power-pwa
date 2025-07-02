@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
-import { User, Phone, Mail, Lock } from 'lucide-react';
+import { User, Shield, Mail, Lock } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 
 interface AuthComponentProps {
@@ -107,15 +107,12 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
               {error && <Alert variant="danger">{error}</Alert>}
 
               <div className="mb-4">
-                <div className="d-flex gap-2 mb-3">
-                  <Button variant={loginType === 'email' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setLoginType('email')} className="flex-1">
-                    <Mail size={16} className="me-1" /> Email
-                  </Button>
-                  <Button variant={loginType === 'phone' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setLoginType('phone')} className="flex-1">
-                    <Phone size={16} className="me-1" /> Phone
-                  </Button>
+                <div className="d-flex gap-2 mb-2">
                   <Button variant={loginType === 'sso' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setLoginType('sso')} className="flex-1">
                     <Lock size={16} className="me-1" /> SSO
+                  </Button>
+                  <Button variant={loginType === 'email' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setLoginType('email')} className="flex-1">
+                    <Shield size={16} className="me-1" /> Admin
                   </Button>
                 </div>
 
