@@ -18,26 +18,17 @@ interface PowerBIViewerProps {
   onBack: () => void;
 }
 
-const PowerBIViewer = ({ menu, onBack }: PowerBIViewerProps) => {
+const PowerBIViewer = ({ menu }: PowerBIViewerProps) => {
   console.log('PowerBI Viewer menu data:', menu);
 
   return (
-    <div className="h-full">
-      <div className="mb-4 d-flex justify-content-between align-items-center">
-        <div>
-          <button
-            onClick={onBack}
-            className="btn btn-outline-secondary btn-sm mb-2"
-          >
-            ← Back to Reports
-          </button>
-          <h3 className="mb-0">{menu.title}</h3>
-          <p className="text-muted mb-0">{menu.description}</p>
-        </div>
+    <div className="h-100">
+      <div className="mb-3">
+        <p className="text-muted mb-0">{menu.description}</p>
       </div>
 
-      <div className="card">
-        <div className="card-body p-0" style={{ height: '600px' }}>
+      <div className="card h-100">
+        <div className="card-body p-0" style={{ height: 'calc(100vh - 200px)' }}>
           <PowerBIEmbed
             reportId={menu.reportId || menu.powerBIReportId}
             embedUrl={menu.embedUrl || ''}
