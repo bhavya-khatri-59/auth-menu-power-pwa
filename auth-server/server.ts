@@ -118,13 +118,21 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, coreDat
 
   // Generate embed token
   const embedTokenPayload = {
-    datasets: [
-      { id: datasetId, xmlaPermissions: "ReadOnly" },
-      { id: coreDatasetId, xmlaPermissions: "ReadOnly" }
-    ],
-    reports: [{ id: reportId }],
-    targetWorkspaces: [{ id: POWERBI_GROUP_ID }]
-  };
+  datasets: [
+    { id: datasetId, xmlaPermissions: "ReadOnly" },
+    { id: coreDatasetId, xmlaPermissions: "ReadOnly" }
+  ],
+  reports: [{ id: reportId }],
+  targetWorkspaces: [{ id: POWERBI_GROUP_ID }],
+  identities: [
+    {
+      username: 'saineeraj.kumar@samunnati.com',
+      roles: ['RM'],
+      datasets: [coreDatasetId]
+    }
+  ]
+};
+
 
   const embedTokenResponse = await fetch('https://api.powerbi.com/v1.0/myorg/GenerateToken', {
     method: 'POST',
