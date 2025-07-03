@@ -1,4 +1,3 @@
-
 import express, { Request, Response, NextFunction } from 'express';
 import { Issuer } from 'openid-client';
 import cors from 'cors';
@@ -151,17 +150,30 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, sharedD
     datasets.push({ id: sharedDatasetId, xmlaPermissions: "ReadOnly" });
   }
 
+  // Always provide identities - PowerBI requires effective identity for RLS-enabled datasets
+  const identities = [];
+  
+  // Add identity for the main dataset
+  identities.push({
+    username: 'saineeraj.kumar@samunnati.com',
+    roles: ['RM'],
+    datasets: [datasetId]
+  });
+
+  // Add identity for shared dataset if it exists and is different
+  if (sharedDatasetId && sharedDatasetId !== datasetId) {
+    identities.push({
+      username: 'saineeraj.kumar@samunnati.com',
+      roles: ['RM'],
+      datasets: [sharedDatasetId]
+    });
+  }
+
   const embedTokenPayload = {
     datasets: datasets,
     reports: [{ id: reportId }],
     targetWorkspaces: [{ id: POWERBI_GROUP_ID }],
-    identities: sharedDatasetId && sharedDatasetId !== datasetId ? [
-      {
-        username: 'saineeraj.kumar@samunnati.com',
-        roles: ['RM'],
-        datasets: [sharedDatasetId]
-      }
-    ] : []
+    identities: identities
   };
 
   console.log('PowerBI Embed Token Payload:', JSON.stringify(embedTokenPayload, null, 2));
