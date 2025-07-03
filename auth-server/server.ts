@@ -1,3 +1,4 @@
+
 import express, { Request, Response, NextFunction } from 'express';
 import { Issuer } from 'openid-client';
 import cors from 'cors';
@@ -106,7 +107,7 @@ const checkEmbedRateLimit = (userEmail: string): boolean => {
 };
 
 // Generate PowerBI embed token and URL
-const generatePowerBIEmbed = async (reportId: string, datasetId: string, coreDatasetId: string) => {
+const generatePowerBIEmbed = async (reportId: string, datasetId: string, sharedDatasetId?: string) => {
   const { POWERBI_CLIENT_ID, POWERBI_CLIENT_SECRET, POWERBI_TENANT_ID, POWERBI_GROUP_ID } = process.env;
   
   if (!POWERBI_CLIENT_ID || !POWERBI_CLIENT_SECRET || !POWERBI_TENANT_ID || !POWERBI_GROUP_ID) {
@@ -139,22 +140,25 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, coreDat
   const accessToken = tokenData.access_token;
 
   // Generate embed token
-  const embedTokenPayload = {
-  datasets: [
-    { id: datasetId, xmlaPermissions: "ReadOnly" },
-    { id: coreDatasetId, xmlaPermissions: "ReadOnly" }
-  ],
-  reports: [{ id: reportId }],
-  targetWorkspaces: [{ id: POWERBI_GROUP_ID }],
-  identities: [
-    {
-      username: 'saineeraj.kumar@samunnati.com',
-      roles: ['RM'],
-      datasets: [coreDatasetId]
-    }
-  ]
-};
+  const datasets = [{ id: datasetId, xmlaPermissions: "ReadOnly" }];
+  
+  // Only add sharedDatasetId if it's provided
+  if (sharedDatasetId) {
+    datasets.push({ id: sharedDatasetId, xmlaPermissions: "ReadOnly" });
+  }
 
+  const embedTokenPayload = {
+    datasets: datasets,
+    reports: [{ id: reportId }],
+    targetWorkspaces: [{ id: POWERBI_GROUP_ID }],
+    identities: sharedDatasetId ? [
+      {
+        username: 'saineeraj.kumar@samunnati.com',
+        roles: ['RM'],
+        datasets: [sharedDatasetId]
+      }
+    ] : []
+  };
 
   const embedTokenResponse = await fetch('https://api.powerbi.com/v1.0/myorg/GenerateToken', {
     method: 'POST',
@@ -189,10 +193,10 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, coreDat
 
 // 🆕 NEW ROUTE: Generate embed token and URL dynamically for any authenticated user with rate limiting
 app.post('/api/reports/generate-embed', verifyJWT, async (req: AuthenticatedRequest, res: Response) => {
-  const { reportId, datasetId, coreDatasetId } = req.body;
+  const { reportId, datasetId, sharedDatasetId } = req.body;
   
-  if (!reportId || !datasetId || !coreDatasetId) {
-    return res.status(400).json({ error: 'Missing embed parameters: reportId, datasetId, and coreDatasetId are required' });
+  if (!reportId || !datasetId) {
+    return res.status(400).json({ error: 'Missing embed parameters: reportId and datasetId are required' });
   }
 
   // Apply rate limiting
@@ -201,7 +205,7 @@ app.post('/api/reports/generate-embed', verifyJWT, async (req: AuthenticatedRequ
   }
 
   try {
-    const { embedToken, embedUrl } = await generatePowerBIEmbed(reportId, datasetId, coreDatasetId);
+    const { embedToken, embedUrl } = await generatePowerBIEmbed(reportId, datasetId, sharedDatasetId);
     return res.json({ embedToken, embedUrl });
   } catch (error) {
     console.error('Embed generation error:', error);
@@ -226,7 +230,7 @@ app.get('/api/reports/:department', verifyJWT, (req: AuthenticatedRequest, res: 
   const filteredReports = departmentReports
     .filter(report => report.isActive !== false)
     .map(report => {
-      const { id, title, description, icon, powerBIReportId, isActive, embedUrl, embedToken, reportId, clientId, tenantId, datasetId, coreDatasetId } = report;
+      const { id, title, description, icon, powerBIReportId, isActive, embedUrl, embedToken, reportId, clientId, tenantId, datasetId, sharedDatasetId } = report;
       return { 
         id, 
         title, 
@@ -240,7 +244,7 @@ app.get('/api/reports/:department', verifyJWT, (req: AuthenticatedRequest, res: 
         clientId, 
         tenantId,
         datasetId,
-        coreDatasetId
+        sharedDatasetId
       };
     });
 
@@ -293,10 +297,10 @@ app.delete('/api/admin/departments/:departmentName', verifyJWT, verifyAdmin, (re
 
 // 🔐 ADMIN - generate PowerBI embed details with rate limiting
 app.post('/api/admin/generate-embed', verifyJWT, verifyAdmin, async (req: AuthenticatedRequest, res: Response) => {
-  const { reportId, datasetId, coreDatasetId } = req.body;
+  const { reportId, datasetId, sharedDatasetId } = req.body;
   
-  if (!reportId || !datasetId || !coreDatasetId) {
-    return res.status(400).json({ error: 'Report ID, dataset ID, and core dataset ID are required' });
+  if (!reportId || !datasetId) {
+    return res.status(400).json({ error: 'Report ID and dataset ID are required' });
   }
 
   // Apply rate limiting for admins too
@@ -305,7 +309,7 @@ app.post('/api/admin/generate-embed', verifyJWT, verifyAdmin, async (req: Authen
   }
 
   try {
-    const { embedToken, embedUrl } = await generatePowerBIEmbed(reportId, datasetId, coreDatasetId);
+    const { embedToken, embedUrl } = await generatePowerBIEmbed(reportId, datasetId, sharedDatasetId);
     return res.json({ embedToken, embedUrl });
   } catch (error) {
     console.error('PowerBI embed generation error:', error);

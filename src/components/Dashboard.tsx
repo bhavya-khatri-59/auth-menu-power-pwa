@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Navbar, Button, Spinner, Alert } from 'react-bootstrap';
 import { LogOut, FileText, Maximize2, Minimize2 } from 'lucide-react';
@@ -26,7 +25,7 @@ interface MenuOption {
   powerBIReportId: string;
   reportId?: string;
   datasetId?: string;
-  coreDatasetId?: string;
+  sharedDatasetId?: string;
   embedUrl?: string;
   embedToken?: string;
 }
@@ -62,22 +61,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
    */
   const generateEmbedToken = async (report: MenuOption) => {
     // Validate required PowerBI configuration
-    if (!report.reportId || !report.datasetId || !report.coreDatasetId) {
-      throw new Error('Missing PowerBI configuration: reportId, datasetId, or coreDatasetId');
+    if (!report.reportId || !report.datasetId) {
+      throw new Error('Missing PowerBI configuration: reportId or datasetId');
     }
 
     const token = localStorage.getItem('jwt_token');
+    
+    const requestBody: any = {
+      reportId: report.reportId,
+      datasetId: report.datasetId
+    };
+    
+    // Only include sharedDatasetId if it exists
+    if (report.sharedDatasetId) {
+      requestBody.sharedDatasetId = report.sharedDatasetId;
+    }
+    
     const response = await fetch(`${API_ENDPOINTS.generateEmbed}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        reportId: report.reportId,
-        datasetId: report.datasetId,
-        coreDatasetId: report.coreDatasetId
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {

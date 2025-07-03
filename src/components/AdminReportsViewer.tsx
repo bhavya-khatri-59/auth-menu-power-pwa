@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Spinner, Alert, Badge } from 'react-bootstrap';
 import { Eye, RefreshCw } from 'lucide-react';
@@ -15,7 +14,7 @@ interface Report {
   clientId?: string;
   reportId?: string;
   datasetId?: string;
-  coreDatasetId?: string;
+  sharedDatasetId?: string;
   embedUrl?: string;
   embedToken?: string;
   tenantId?: string;
@@ -102,8 +101,8 @@ const AdminReportsViewer: React.FC = () => {
    */
   const handleViewReport = async (report: Report) => {
     // Validate required PowerBI configuration fields
-    if (!report.reportId || !report.datasetId || !report.coreDatasetId) {
-      setError('Report is missing required PowerBI configuration (reportId, datasetId, coreDatasetId)');
+    if (!report.reportId || !report.datasetId) {
+      setError('Report is missing required PowerBI configuration (reportId, datasetId)');
       return;
     }
 
@@ -114,17 +113,23 @@ const AdminReportsViewer: React.FC = () => {
       const token = localStorage.getItem('jwt_token');
       
       // Generate fresh embed token and URL for security
+      const requestBody: any = {
+        reportId: report.reportId,
+        datasetId: report.datasetId
+      };
+      
+      // Only include sharedDatasetId if it exists
+      if (report.sharedDatasetId) {
+        requestBody.sharedDatasetId = report.sharedDatasetId;
+      }
+      
       const response = await fetch(API_ENDPOINTS.generateEmbed, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          reportId: report.reportId,
-          datasetId: report.datasetId,
-          coreDatasetId: report.coreDatasetId
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -244,7 +249,7 @@ const AdminReportsViewer: React.FC = () => {
                   <strong>PowerBI ID:</strong> {report.powerBIReportId}<br/>
                   <strong>Report ID:</strong> {report.reportId?.substring(0, 8) || 'Not set'}...<br/>
                   <strong>Dataset ID:</strong> {report.datasetId?.substring(0, 8) || 'Not set'}...<br/>
-                  <strong>Core Dataset ID:</strong> {report.coreDatasetId?.substring(0, 8) || 'Not set'}...
+                  <strong>Shared Dataset ID:</strong> {report.sharedDatasetId?.substring(0, 8) || 'Not set'}...
                 </p>
                 
                 {/* View report button with conditional enabling */}
@@ -252,7 +257,7 @@ const AdminReportsViewer: React.FC = () => {
                   variant="outline-primary"
                   size="sm"
                   onClick={() => handleViewReport(report)}
-                  disabled={!report.isActive || generatingEmbed || !report.reportId || !report.datasetId || !report.coreDatasetId}
+                  disabled={!report.isActive || generatingEmbed || !report.reportId || !report.datasetId}
                   className="d-flex align-items-center"
                 >
                   <Eye size={14} className="me-1" />

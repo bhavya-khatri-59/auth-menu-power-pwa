@@ -13,6 +13,8 @@ interface Report {
   isActive?: boolean;
   embedUrl?: string;
   embedToken?: string;
+  datasetId?: string;
+  sharedDatasetId?: string;
 }
 
 const fetchReports = async (department: string): Promise<Report[]> => {
