@@ -647,7 +647,7 @@ const AdminReportsEditor: React.FC<AdminReportsEditorProps> = ({ onStatsUpdate }
                   </Col>
                   <Col md={4}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Core Dataset ID</Form.Label>
+                      <Form.Label>Shared Dataset ID</Form.Label>
                       <Form.Control
                         type="text"
                         value={formData.coreDatasetId}
