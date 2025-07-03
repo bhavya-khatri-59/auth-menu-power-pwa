@@ -114,6 +114,8 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, sharedD
     throw new Error('Missing PowerBI environment variables');
   }
 
+  console.log('PowerBI Embed Request:', { reportId, datasetId, sharedDatasetId, groupId: POWERBI_GROUP_ID });
+
   const authority = `https://login.microsoftonline.com/${POWERBI_TENANT_ID}`;
   const scope = 'https://analysis.windows.net/powerbi/api/.default';
   
@@ -133,6 +135,8 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, sharedD
   });
 
   if (!tokenResponse.ok) {
+    const tokenError = await tokenResponse.text();
+    console.error('Token request failed:', tokenError);
     throw new Error(`Token request failed: ${tokenResponse.statusText}`);
   }
 
@@ -142,8 +146,8 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, sharedD
   // Generate embed token
   const datasets = [{ id: datasetId, xmlaPermissions: "ReadOnly" }];
   
-  // Only add sharedDatasetId if it's provided
-  if (sharedDatasetId) {
+  // Only add sharedDatasetId if it's provided and different from datasetId
+  if (sharedDatasetId && sharedDatasetId !== datasetId) {
     datasets.push({ id: sharedDatasetId, xmlaPermissions: "ReadOnly" });
   }
 
@@ -151,7 +155,7 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, sharedD
     datasets: datasets,
     reports: [{ id: reportId }],
     targetWorkspaces: [{ id: POWERBI_GROUP_ID }],
-    identities: sharedDatasetId ? [
+    identities: sharedDatasetId && sharedDatasetId !== datasetId ? [
       {
         username: 'saineeraj.kumar@samunnati.com',
         roles: ['RM'],
@@ -159,6 +163,8 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, sharedD
       }
     ] : []
   };
+
+  console.log('PowerBI Embed Token Payload:', JSON.stringify(embedTokenPayload, null, 2));
 
   const embedTokenResponse = await fetch('https://api.powerbi.com/v1.0/myorg/GenerateToken', {
     method: 'POST',
@@ -170,7 +176,25 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, sharedD
   });
 
   if (!embedTokenResponse.ok) {
-    throw new Error(`Embed token generation failed: ${embedTokenResponse.statusText}`);
+    const errorText = await embedTokenResponse.text();
+    console.error('Embed token generation failed:', {
+      status: embedTokenResponse.status,
+      statusText: embedTokenResponse.statusText,
+      error: errorText,
+      payload: embedTokenPayload
+    });
+    
+    let errorMessage = `Embed token generation failed: ${embedTokenResponse.statusText}`;
+    try {
+      const errorData = JSON.parse(errorText);
+      if (errorData.error && errorData.error.message) {
+        errorMessage += ` - ${errorData.error.message}`;
+      }
+    } catch (e) {
+      errorMessage += ` - ${errorText}`;
+    }
+    
+    throw new Error(errorMessage);
   }
 
   const embedTokenData = await embedTokenResponse.json();
@@ -182,11 +206,15 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, sharedD
   });
 
   if (!reportResponse.ok) {
+    const reportError = await reportResponse.text();
+    console.error('Report details fetch failed:', reportError);
     throw new Error(`Report details fetch failed: ${reportResponse.statusText}`);
   }
 
   const reportData = await reportResponse.json();
   const embedUrl = reportData.embedUrl;
+
+  console.log('PowerBI Embed Success:', { reportId, embedUrl: embedUrl.substring(0, 50) + '...' });
 
   return { embedToken, embedUrl };
 };
