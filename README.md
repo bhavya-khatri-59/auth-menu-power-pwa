@@ -1,5 +1,5 @@
 
-# Business Portal - PowerBI Dashboard Application
+# Insights 2.0 - PowerBI Dashboard Application
 
 A comprehensive business intelligence portal built with React and TypeScript, featuring PowerBI integration, department-based access control, and admin management tools.
 
