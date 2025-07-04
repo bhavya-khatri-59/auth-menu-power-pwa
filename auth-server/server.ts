@@ -151,16 +151,20 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, sharedD
   }
 
   // Always provide identities - PowerBI requires effective identity for RLS-enabled datasets
-  const identities = [];
   
   // Add identity for the main dataset
+  const identities: {
+    username: string;
+    roles: string[];
+    datasets: string[];
+  }[] = [];
+
   identities.push({
     username: 'saineeraj.kumar@samunnati.com',
     roles: ['RM'],
     datasets: [datasetId]
   });
 
-  // Add identity for shared dataset if it exists and is different
   if (sharedDatasetId && sharedDatasetId !== datasetId) {
     identities.push({
       username: 'saineeraj.kumar@samunnati.com',
@@ -168,6 +172,7 @@ const generatePowerBIEmbed = async (reportId: string, datasetId: string, sharedD
       datasets: [sharedDatasetId]
     });
   }
+
 
   const embedTokenPayload = {
     datasets: datasets,
