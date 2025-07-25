@@ -1,23 +1,3 @@
-
-# RAG Chatbot Architecture & Document Upload Flow
-
-## 🔁 Chatbot (RAG) Flow
-
-```mermaid
-flowchart TD
-    A[User enters query in UI] --> B[Send query to FastAPI backend]
-    B --> C[Generate embedding using MiniLM]
-    C --> D[Query Azure Cognitive Search]
-    D --> E1[Semantic search - text]
-    D --> E2[Vector search - embedding]
-    E1 --> F[Collect relevant text chunks]
-    E2 --> F
-    F --> G[Build context string]
-    G --> H[Send context + query to Gemini API]
-    H --> I[LLM generates answer]
-    I --> J[Send answer back to UI]
-```
-
 # Insights 2.0 - PowerBI Dashboard Application
 
 A comprehensive business intelligence portal built with React and TypeScript, featuring PowerBI integration, department-based access control, and admin management tools.
