@@ -64,6 +64,32 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
       // Validate required fields
       if (!identifier || !password) throw new Error(`${loginType === 'email' ? 'Email' : 'Phone'} and password are required`);
 
+      // Mock credentials for testing
+      const mockCredentials = [
+        { email: 'admin@test.com', password: 'admin123', department: 'Admin', isAdmin: true },
+        { email: 'user@test.com', password: 'user123', department: 'Sales', isAdmin: false },
+      ];
+
+      // Check if mock credentials are used
+      const mockUser = mockCredentials.find(
+        cred => cred.email.toLowerCase() === identifier.toLowerCase() && cred.password === password
+      );
+
+      if (mockUser) {
+        // Create mock token and user
+        const user = {
+          email: mockUser.email,
+          department: mockUser.department,
+          isAdmin: mockUser.isAdmin
+        };
+        const mockToken = `mock.${btoa(JSON.stringify(user))}.token`;
+        
+        localStorage.setItem('jwt_token', mockToken);
+        localStorage.setItem('user', JSON.stringify(user));
+        onLogin(user);
+        return;
+      }
+
       // Send login request to backend
       const res = await fetch(API_ENDPOINTS.manualLogin, {
         method: 'POST',
@@ -166,9 +192,18 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
                       )}
                     </Button>
                   </div>
-                ) : (
+                 ) : (
                   // Manual login form for admin users
                   <Form onSubmit={handleSubmit}>
+                    {/* Test credentials info */}
+                    <Alert variant="info" className="mb-3 py-2">
+                      <small>
+                        <strong>Test Credentials:</strong><br />
+                        Admin: admin@test.com / admin123<br />
+                        User: user@test.com / user123
+                      </small>
+                    </Alert>
+
                     {/* Email input for admin login */}
                     {loginType === 'email' && (
                       <Form.Group className="mb-3">
